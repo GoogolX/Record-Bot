@@ -1,7 +1,5 @@
 Recordings/*
-Transcripts/*
-Summaries*/
 *.wav
 *.log
-ACTION-ITEMS.md
 vendor/*
+.DS_Store
