@@ -1,0 +1,31 @@
+[
+  {
+    "id": "2026-08-26_21-32-40",
+    "speakers": {
+      "Speaker 1": "Gayatri",
+      "Speaker 2": "Trinadh",
+      "Speaker 3": "Abhay"
+    }
+  },
+  {
+    "id": "2026-08-26_12-53-10",
+    "speakers": {
+      "Speaker 1": "Sharath",
+      "Speaker 2": "Trinadh",
+      "Speaker 3": "Gayatri",
+      "Speaker 5": "Abhay",
+      "Speaker 6": "Shubham"
+    },
+    "unresolved": ["Speaker 4"]
+  },
+  {
+    "id": "2026-08-26_21-05-08",
+    "speakers": {
+      "Speaker 1": "Ravi",
+      "Speaker 2": "Lakshmi",
+      "Speaker 3": "Rajeshwari",
+      "Speaker 4": "Manjeet",
+      "Speaker 5": "Arvind"
+    }
+  }
+]

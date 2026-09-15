@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-09-11_20-39-06",
+  "backend": "local",
+  "model": "qwen2.5:7b",
+  "avg_latency": 53.94077316919962,
+  "overall_speaker_accuracy": 100.0,
+  "overall_action_recall": 0.0,
+  "results": [
+    {
+      "id": "2026-08-26_21-32-40",
+      "latency": 51.56115365028381,
+      "speaker_accuracy_pct": 100.0,
+      "speaker_hits": 3,
+      "speaker_target": 3,
+      "action_recall_pct": 0.0,
+      "action_hits": 0,
+      "action_target": 3,
+      "predicted_speakers": {
+        "Speaker 1": "Gayatri (high)",
+        "Speaker 2": "Trinadh (high)",
+        "Speaker 3": "Abhay (high)"
+      },
+      "speaker_evidence": {}
+    },
+    {
+      "id": "2026-08-26_12-53-10",
+      "latency": 54.83048987388611,
+      "speaker_accuracy_pct": 100.0,
+      "speaker_hits": 5,
+      "speaker_target": 5,
+      "action_recall_pct": 0.0,
+      "action_hits": 0,
+      "action_target": 3,
+      "predicted_speakers": {
+        "Speaker 1": "Sharath (high)",
+        "Speaker 2": "Trinadh (low)",
+        "Speaker 3": "Gayatri (medium)",
+        "Speaker 4": "unresolved",
+        "Speaker 5": "Abhay (medium)",
+        "Speaker 6": "Shubham (high)"
+      },
+      "speaker_evidence": {}
+    },
+    {
+      "id": "2026-08-26_21-05-08",
+      "latency": 55.430675983428955,
+      "speaker_accuracy_pct": 100.0,
+      "speaker_hits": 5,
+      "speaker_target": 5,
+      "action_recall_pct": 0.0,
+      "action_hits": 0,
+      "action_target": 3,
+      "predicted_speakers": {
+        "Speaker 1": "Ravi (high)",
+        "Speaker 2": "Lakshmi (high)",
+        "Speaker 3": "Rajeshwari (high)",
+        "Speaker 4": "Manjeet (high)",
+        "Speaker 5": "Arvind (medium)"
+      },
+      "speaker_evidence": {}
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "timestamp": "2026-09-11_20-31-36",
+  "backend": "local",
+  "model": "qwen2.5:14b",
+  "avg_latency": 105.6544820467631,
+  "overall_speaker_accuracy": 100.0,
+  "overall_action_recall": 0.0,
+  "results": [
+    {
+      "id": "2026-08-26_21-32-40",
+      "latency": 93.93514394760132,
+      "speaker_accuracy_pct": 100.0,
+      "speaker_hits": 3,
+      "speaker_target": 3,
+      "action_recall_pct": 0.0,
+      "action_hits": 0,
+      "action_target": 3,
+      "predicted_speakers": {
+        "Speaker 1": "Gayatri (high)",
+        "Speaker 2": "Trinadh (high)",
+        "Speaker 3": "Abhay (high)"
+      },
+      "speaker_evidence": {
+        "Speaker 1": "High confidence based on context and consistent use of name.",
+        "Speaker 2": "High confidence based on context and consistent use of name.",
+        "Speaker 3": "High confidence based on context and consistent use of name."
+      }
+    },
+    {
+      "id": "2026-08-26_12-53-10",
+      "latency": 113.38798809051514,
+      "speaker_accuracy_pct": 100.0,
+      "speaker_hits": 5,
+      "speaker_target": 5,
+      "action_recall_pct": 0.0,
+      "action_hits": 0,
+      "action_target": 3,
+      "predicted_speakers": {
+        "Speaker 1": "Sharath (high)",
+        "Speaker 2": "Trinadh (low)",
+        "Speaker 3": "Gayatri (medium)",
+        "Speaker 4": "unresolved",
+        "Speaker 5": "Abhay (medium)",
+        "Speaker 6": "Shubham (high)"
+      },
+      "speaker_evidence": {
+        "Speaker 1": "High confidence due to multiple references and clear context.",
+        "Speaker 2": "Low confidence as the speaker's contributions are minimal and unclear.",
+        "Speaker 3": "Medium confidence based on contextual clues and direct mentions.",
+        "Speaker 4": "Unresolved, no clear evidence or context for this speaker.",
+        "Speaker 5": "Medium confidence due to multiple references but less clarity than Sharath.",
+        "Speaker 6": "High confidence as the speaker is clearly identified by name and contributions."
+      }
+    },
+    {
+      "id": "2026-08-26_21-05-08",
+      "latency": 109.64031410217285,
+      "speaker_accuracy_pct": 100.0,
+      "speaker_hits": 5,
+      "speaker_target": 5,
+      "action_recall_pct": 0.0,
+      "action_hits": 0,
+      "action_target": 3,
+      "predicted_speakers": {
+        "Speaker 1": "Ravi (high)",
+        "Speaker 2": "Lakshmi (high)",
+        "Speaker 3": "Rajeshwari (high)",
+        "Speaker 4": "Manjeet (high)",
+        "Speaker 5": "Arvind (medium)"
+      },
+      "speaker_evidence": {
+        "Speaker 1": "Known from user metadata.",
+        "Speaker 2": "Known from user metadata.",
+        "Speaker 3": "Known from user metadata.",
+        "Speaker 4": "Known from user metadata.",
+        "Speaker 5": "Known from user metadata."
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+[
+  {
+    "id": "2026-08-26_21-32-40",
+    "must_include": [
+      {"owner": "Trinadh", "action": "Finish PO column work"},
+      {"owner": "Abhay", "action": "Validate the supplier table"},
+      {"owner": "Gayatri", "action": "Set up time with Zabi"}
+    ]
+  },
+  {
+    "id": "2026-08-26_12-53-10",
+    "must_include": [
+      {"owner": "Sharath", "action": "per-table CDC/PO plan"},
+      {"owner": "Shubham", "action": "AP incremental load"},
+      {"owner": "Gayatri", "action": "Follow up with Hari"}
+    ]
+  },
+  {
+    "id": "2026-08-26_21-05-08",
+    "must_include": [
+      {"owner": "Ravi", "action": "Follow up with Andy"},
+      {"owner": "Rajeshwari", "action": "three untraceable reports"},
+      {"owner": "Manjeet", "action": "time-and-labor-specific employee dimension"}
+    ]
+  },
+  {
+    "id": "2026-08-26_09-42-24",
+    "must_include": [
+      {"owner": "Mary", "action": "AR transaction documentation"}
+    ],
+    "notes": "Several rows are still Speaker 3; quality audit flags those separately."
+  },
+  {
+    "id": "2026-08-25_22-58-15",
+    "must_include": [
+      {"owner": "Hari", "action": "integration-ID lookup and surrogate key"},
+      {"owner": "Hari", "action": "Type 2"}
+    ]
+  }
+]
