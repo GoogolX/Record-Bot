@@ -12,8 +12,8 @@ The meeting focused on addressing issues related to report validation for a proj
 **Question:** Action items for each person
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Arunkumar | Validate reports and use tools/scripts instead of manual methods. | Not stated | notes, high |
-| Sayli | Start with TMS reports and validate as per Kaushik's guidance. | Not stated | notes, medium |
+| Arunkumar | Validate reports and use tools/scripts instead of manual methods. | Not stated | notes | high |
+| Sayli | Start with TMS reports and validate as per Kaushik's guidance. | Not stated | notes | high |
 
 ## What was covered
 - Validation process for 52 reports over six working days.
@@ -28,8 +28,8 @@ The meeting focused on addressing issues related to report validation for a proj
 
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Arunkumar | Validate reports and use tools/scripts instead of manual methods. | Not stated | notes, high |
-| Sayli | Start with TMS reports and validate as per Kaushik's guidance. | Not stated | notes, medium |
+| Arunkumar | Validate reports and use tools/scripts instead of manual methods. | Not stated | notes | high |
+| Sayli | Start with TMS reports and validate as per Kaushik's guidance. | Not stated | notes | high |
 
 ## Open questions
 - How to handle missing documentation for validation processes.

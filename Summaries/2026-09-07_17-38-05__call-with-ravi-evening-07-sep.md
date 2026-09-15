@@ -11,8 +11,8 @@ During the meeting, Kaushik and Ravi discussed the progress of data recon in QA 
 **Question:** Action items for each person
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Kaushik | Ensure Arun connects with Shashvat and gets access by September 9th | Not stated | notes, high | high |
-| Ravi | Coordinate with Rajeshwari to start report testing on September 21st deadline | Not stated | transcript, high | high |
+| Kaushik | Ensure Arun connects with Shashvat and gets access by September 9th | Not stated | notes | high |
+| Ravi | Coordinate with Rajeshwari to start report testing on September 21st deadline | Not stated | transcript | high |
 
 ## What was covered
 - **Data Recon in QA Environment:** Dev team will run recon tests and capture results. Arun should have access by September 9th.
@@ -26,8 +26,8 @@ During the meeting, Kaushik and Ravi discussed the progress of data recon in QA 
 
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Kaushik | Ensure Arun connects with Shashvat and gets access by September 9th | Not stated | notes, high | high |
-| Ravi | Coordinate with Rajeshwari to start report testing on September 21st deadline | Not stated | transcript, high | high |
+| Kaushik | Ensure Arun connects with Shashvat and gets access by September 9th | Not stated | notes | high |
+| Ravi | Coordinate with Rajeshwari to start report testing on September 21st deadline | Not stated | transcript | high |
 
 ## Open questions
 - How will the team handle special characters in certain tables?

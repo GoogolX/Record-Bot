@@ -24,8 +24,8 @@ Not covered in this meeting.
 
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Kaushik | Reallocate hours accordingly: 120 to Snowflake and 40 to Elevate. | Not stated | notes, high | high |
-| Ravi | Include Kaushik in the AIOps proposal development for Ventura Foods. | Not stated | transcript, medium | medium |
+| Kaushik | Reallocate hours accordingly: 120 to Snowflake and 40 to Elevate. | Not stated | notes | high |
+| Ravi | Include Kaushik in the AIOps proposal development for Ventura Foods. | Not stated | transcript | medium |
 
 ## Open questions
 - When will the Elevate phase start?

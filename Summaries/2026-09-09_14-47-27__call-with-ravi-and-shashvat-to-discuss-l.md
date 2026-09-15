@@ -26,7 +26,7 @@ The meeting focused on addressing Lakshmi's requests for report repointing and Q
 
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Shashvat | Prioritize report repointing and QA validation for priority one reports by 11th September. | 2026-09-11 | transcript, notes | high |
+| Shashvat | Prioritize report repointing and QA validation for priority one reports by 11th September. | 2026-09-11 | both | high |
 | Kaushik | Connect with Rajeshwari to finalize QA validation ETNs. | Not stated | notes | medium |
 | Kaushik | Coordinate with Ravi on testing details for the call with Tommy Wang. | Not stated | notes | medium |
 
