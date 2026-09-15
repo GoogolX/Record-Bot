@@ -1,10 +1,9 @@
 # RecordBot
 
 A menu bar app that records whatever audio is playing on your Mac, transcribes it locally,
-and hands the text to Claude for summaries and a running action-items list.
+and hands the text to a local LLM (Ollama) for summaries and a running action-items list.
 
-Nothing here talks to a paid API. Whisper runs on your machine; the summarizing runs inside
-your existing Claude subscription as a scheduled task.
+Nothing here talks to a paid API. Whisper runs on your machine; the summarizing runs instantly and entirely locally via Ollama.
 
 ## Install
 
@@ -126,7 +125,7 @@ Three ways, in increasing detail.
 (`queued`, `converting`, `transcribing`, `writing`), PID, and elapsed time. Click any
 running job to cancel it immediately. Failed jobs appear with a Retry entry; hover
 to see the failure reason. Below that, a Summaries section shows how many transcripts
-are still waiting on Claude.
+are still waiting to be summarized.
 
 **The terminal.**
 
@@ -168,24 +167,15 @@ is about 10 MB per minute for the pair.
 
 Changing the model means re-running `scripts/setup.sh` to fetch it.
 
-## The Claude side
+## The Summarizer (Local LLM)
 
-A scheduled task named `meeting-summarizer` runs on the hour. For each transcript marked
-`status: awaiting-summary` it writes one file into `Summaries/` covering that meeting
-alone: what it was for, what was covered, decisions, an action table with owners and a
-confidence column, open questions, and a note on transcript quality when the audio was
-rough. Then it adds a section for that meeting to `ACTION-ITEMS.md` and flips the status
-so nothing is processed twice.
+As soon as the audio transcription finishes, `transcribe.sh` automatically kicks off `summarize.py` to hit your local Ollama LLM (default `qwen2.5:14b`). For each transcript marked `status: awaiting-summary`, it immediately writes one file into `Summaries/` covering that meeting alone: what it was for, what was covered, decisions, an action table with owners and a confidence column, open questions, and a note on transcript quality when the audio was rough. Then it adds a section for that meeting to `ACTION-ITEMS.md` and flips the status so nothing is processed twice.
 
-Nothing is merged across meetings. `ACTION-ITEMS.md` is an index of per-meeting tables,
-so a commitment made in one call never gets silently blended with a similar one from
-another.
+Nothing is merged across meetings. `ACTION-ITEMS.md` is an index of per-meeting tables, so a commitment made in one call never gets silently blended with a similar one from another.
 
-Scheduled tasks only run while the Claude app is open. If it was closed when the hour
-turned, the task catches up on next launch, so a closed laptop means slightly later
-summaries, not lost ones.
+Because Ollama runs locally, memory is automatically flushed immediately after completion (`keep_alive: 0`) so your RAM footprint returns to normal.
 
-You can also run the summarizer manually at any time or generate prompts for web LLMs:
+You can also run the summarizer manually at any time or override the backend:
 
 ```bash
 ./scripts/summarize.py                  # summarizes any pending transcript using GEMINI_API_KEY or ANTHROPIC_API_KEY
