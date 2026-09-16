@@ -3,3 +3,4 @@ Recordings/*
 *.log
 vendor/*
 .DS_Store
+.hf_token
