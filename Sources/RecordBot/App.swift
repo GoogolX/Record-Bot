@@ -237,7 +237,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(header("Summaries"))
         menu.addItem(disabled(waiting == 0
             ? "  All caught up"
-            : "  \(waiting) transcript\(waiting == 1 ? "" : "s") awaiting Claude"))
+            : "  \(waiting) transcript\(waiting == 1 ? "" : "s") awaiting Summary"))
 
         menu.addItem(.separator())
 
@@ -429,14 +429,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// Asks what the meeting was, right after stopping, while it's still fresh.
-    /// The answers go in a sidecar .meta file that the transcript inherits, so Claude
+    /// The answers go in a sidecar .meta file that the transcript inherits, so the LLM
     /// summarizes with some idea of who was talking and why.
     /// Returns true if transcription should proceed, or false if discarded.
     private func askForContext(about wav: URL) -> Bool {
         let alert = NSAlert()
         alert.messageText = "What was this meeting?"
         alert.informativeText = "All of this is optional. Anything you fill in gets handed "
-            + "to Claude along with the transcript."
+            + "to the LLM along with the transcript."
         alert.addButton(withTitle: "Save")
         alert.addButton(withTitle: "Skip")
         alert.addButton(withTitle: "Discard")

@@ -1,10 +1,10 @@
 # RecordBot
 
 A menu bar app that records whatever audio is playing on your Mac, transcribes it locally,
-and hands the text to Claude for summaries and a running action-items list.
+and hands the text to a local LLM for summaries and a running action-items list.
 
 Nothing here talks to a paid API. Whisper runs on your machine; the summarizing runs inside
-your existing Claude subscription as a scheduled task.
+Ollama instantly in the background.
 
 ## Install
 
@@ -126,7 +126,7 @@ Three ways, in increasing detail.
 (`queued`, `converting`, `transcribing`, `writing`), PID, and elapsed time. Click any
 running job to cancel it immediately. Failed jobs appear with a Retry entry; hover
 to see the failure reason. Below that, a Summaries section shows how many transcripts
-are still waiting on Claude.
+are still awaiting summarization.
 
 **The terminal.**
 
@@ -168,9 +168,9 @@ is about 10 MB per minute for the pair.
 
 Changing the model means re-running `scripts/setup.sh` to fetch it.
 
-## The Claude side
+## The Summarizer
 
-A scheduled task named `meeting-summarizer` runs on the hour. For each transcript marked
+A background task automatically runs when transcription completes. For each transcript marked
 `status: awaiting-summary` it writes one file into `Summaries/` covering that meeting
 alone: what it was for, what was covered, decisions, an action table with owners and a
 confidence column, open questions, and a note on transcript quality when the audio was

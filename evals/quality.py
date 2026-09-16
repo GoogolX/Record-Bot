@@ -84,7 +84,7 @@ def format_report(report: dict) -> str:
             "  summaries with no matching transcript: " + ", ".join(report["orphan_summaries"])
         )
     if report["awaiting_summary"]:
-        lines.append("  awaiting Claude: " + ", ".join(report["awaiting_summary"]))
+        lines.append("  awaiting Local LLM: " + ", ".join(report["awaiting_summary"]))
     if report["speaker_issues"]:
         lines.append("  speaker issues:")
         lines.extend(f"    - {item}" for item in report["speaker_issues"])

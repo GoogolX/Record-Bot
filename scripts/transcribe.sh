@@ -155,14 +155,28 @@ run_whisper() {
 }
 
 run_whisper "$WORK/system16.wav" "$WORK/system" || fail "whisper exited with an error"
-[ -s "$WORK/system.txt" ] || fail "whisper produced an empty transcript"
 
 MIC_JSON=""
-if [ -n "$MIC" ]; then
-  if run_whisper "$WORK/mic16.wav" "$WORK/mic" && [ -s "$WORK/mic.json" ]; then
-    MIC_JSON="$WORK/mic.json"
+if [ ! -s "$WORK/system.txt" ]; then
+  if [ -n "$MIC" ]; then
+    log "INFO  system track is empty, falling back to mic track (dictation mode)"
+    if run_whisper "$WORK/mic16.wav" "$WORK/mic" && [ -s "$WORK/mic.json" ]; then
+      cp "$WORK/mic.txt" "$WORK/system.txt"
+      cp "$WORK/mic.json" "$WORK/system.json"
+      MIC="" # Disable secondary mic logic since mic is now the primary track
+    else
+      fail "whisper produced an empty transcript on both system and mic tracks"
+    fi
   else
-    log "WARN  whisper gave nothing usable for the mic track; it can still identify you, but your words come from the call audio"
+    fail "whisper produced an empty transcript"
+  fi
+else
+  if [ -n "$MIC" ]; then
+    if run_whisper "$WORK/mic16.wav" "$WORK/mic" && [ -s "$WORK/mic.json" ]; then
+      MIC_JSON="$WORK/mic.json"
+    else
+      log "WARN  whisper gave nothing usable for the mic track; it can still identify you, but your words come from the call audio"
+    fi
   fi
 fi
 

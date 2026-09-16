@@ -108,7 +108,7 @@ show() {
     printf '  %-22s %s\n' "$(basename "$f" .failed)" "$(cat "$f")"
   done
 
-  printf '\n\033[1mWaiting on Claude\033[0m\n'
+  printf '\n\033[1mWaiting on Summary\033[0m\n'
   local waiting=0
   for f in "$HOME_DIR"/Transcripts/*.md; do
     if grep -q '^status: awaiting-summary' "$f" 2>/dev/null; then
