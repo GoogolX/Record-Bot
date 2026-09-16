@@ -245,6 +245,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             ("Pause Transcription/Summarisation", #selector(pauseProcessing)),
             ("Resume Transcription/Summarisation", #selector(resumeProcessing)),
             ("Open Transcripts Folder", #selector(openTranscripts)),
+            ("Open Summaries Folder", #selector(openSummaries)),
             ("Open Action Items", #selector(openActionItems)),
             ("Open Log", #selector(openLog))
         ] {
@@ -297,6 +298,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSWorkspace.shared.open(transcriptsDir)
     }
 
+    @objc private func openSummaries() {
+        let summariesDir = home.appendingPathComponent("Summaries")
+        NSWorkspace.shared.open(summariesDir)
+    }
+
     @objc private func openActionItems() {
         if !FileManager.default.fileExists(atPath: actionItemsFile.path) {
             try? "# Action Items\n\nNothing yet.\n".write(to: actionItemsFile, atomically: true, encoding: .utf8)
@@ -346,6 +352,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // Send SIGSTOP (like Ctrl+Z) to freeze the processes in place
             process.arguments = ["-c", "pkill -STOP -f transcribe.sh; pkill -STOP -f whisper-cli; pkill -STOP -f summarize.py; curl -s -X POST http://localhost:11434/api/generate -d '{\"model\": \"qwen2.5:14b\", \"keep_alive\": 0}' > /dev/null &"]
             try? process.run()
+            process.waitUntilExit()
             
             Task { @MainActor in
                 report(title: "Processing Paused", body: "Tasks suspended (Ctrl+Z). Memory will swap to disk.")
@@ -361,9 +368,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // Send SIGCONT to resume the processes
             process.arguments = ["-c", "pkill -CONT -f transcribe.sh; pkill -CONT -f whisper-cli; pkill -CONT -f summarize.py"]
             try? process.run()
+            process.waitUntilExit()
             
             Task { @MainActor in
-                report(title: "Processing Resumed", body: "Suspended tasks have been resumed.")
+                report(title: "Processing Resumed", body: "Tasks resumed from where they left off.")
                 refreshTitle()
             }
         }
