@@ -39,6 +39,7 @@ final class AudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private var converter: AVAudioConverter?
     private var currentURL: URL?
     private var recording = false
+    private var starting = false
     private var systemFirstBufferAt: Double?
 
     var isRecording: Bool {
@@ -49,7 +50,19 @@ final class AudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     /// Starts capture, writing to a timestamped WAV inside `directory`. Returns the destination.
     @discardableResult
     func start(in directory: URL) async throws -> URL {
-        guard !isRecording else { throw RecorderError.alreadyRecording }
+        lock.lock()
+        guard !recording, !starting else {
+            lock.unlock()
+            throw RecorderError.alreadyRecording
+        }
+        starting = true
+        lock.unlock()
+        
+        defer {
+            lock.lock()
+            starting = false
+            lock.unlock()
+        }
 
         let content = try await SCShareableContent.excludingDesktopWindows(
             false,
