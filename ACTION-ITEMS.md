@@ -1,6 +1,13 @@
 # Meetings and Action Items
-_Last updated: 2026-09-15 19:34_
+_Last updated: 2026-09-16 08:49_
 
+## General Call with Sakcham — 2026-09-16
+
+[Full summary](Summaries/2026-09-16_15-56-50__general-call-with-sakcham.md)
+
+| Owner | Action | Due | Source | Confidence |
+| --- | --- | --- | --- | --- |
+| Kaushik | Apply for client visit auxiliary in Zoho. | Not stated | notes | high |
 ## Untitled meeting — 
 
 [Full summary](Summaries/test_loop_clip__untitled-meeting.md)
@@ -36,15 +43,15 @@ _Last updated: 2026-09-15 19:34_
 | --- | --- | --- | --- | --- |
 | Kaushik | Ping Mohit for tolerance values | Not stated | Notes | Medium |
 
-## Morning stand-up with Sayli and Arunkumar on Reporting Testing VF — 2026-09-15
+## Evening VF Standup with lakshmi — 2026-09-15
 
-[Full summary](Summaries/2026-09-15_10-02-20__morning-stand-up-with-sayli-and-arunkuma.md)
+[Full summary](Summaries/2026-09-15_21-04-32__evening-vf-standup-with-lakshmi.md)
 
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Sayli | Complete five or six finance reports by Friday. | Friday | notes | high |
-| Arunkumar | Work with Rajeshwari to complete 60-70% of oil trading reports today. | Not stated | notes | high |
-
+| Rajeshwari | Confirm groupings by tomorrow's call | Not stated | notes | medium |
+| Manjeet | Communicate with users about freezing report updates one week prior to UAT | Not stated | notes | high |
+| Kaushik | Respond to Tommy’s comments on incremental data validation and schedule a meeting for further discussion | Not stated | transcript, notes | high |
 ## Call with Ravi to Discuss Ventura Foods Hours being Charged — 2026-09-11
 
 [Full summary](Summaries/2026-09-11_11-53-50__call-with-ravi-to-discuss-ventura-foods.md)

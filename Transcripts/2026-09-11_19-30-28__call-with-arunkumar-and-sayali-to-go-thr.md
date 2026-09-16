@@ -8,7 +8,8 @@ model: "ggml-large-v3-turbo-q5_0.bin"
 language: "en"
 diarized: no
 own_mic_track: yes
-status: awaiting-summary
+status: skipped
+skip_reason: "Transcript corrupted—entire second half is repeated junk text; first part fragmented and unintelligible"
 ---
 
 ## Transcript

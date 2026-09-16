@@ -163,6 +163,7 @@ if [ ! -s "$WORK/system.txt" ]; then
     if run_whisper "$WORK/mic16.wav" "$WORK/mic" && [ -s "$WORK/mic.json" ]; then
       cp "$WORK/mic.txt" "$WORK/system.txt"
       cp "$WORK/mic.json" "$WORK/system.json"
+      cp "$WORK/mic16.wav" "$WORK/system16.wav"
       MIC="" # Disable secondary mic logic since mic is now the primary track
     else
       fail "whisper produced an empty transcript on both system and mic tracks"
