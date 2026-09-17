@@ -75,6 +75,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
 
+        // Auto-rescue any orphaned recordings that never launched
+        DispatchQueue.global(qos: .background).async {
+            let allRecordings = (try? FileManager.default.contentsOfDirectory(at: self.recordingsDir, includingPropertiesForKeys: nil)) ?? []
+            let allTranscripts = (try? FileManager.default.contentsOfDirectory(at: self.transcriptsDir, includingPropertiesForKeys: nil)) ?? []
+            let allStatuses = (try? FileManager.default.contentsOfDirectory(at: self.statusDir, includingPropertiesForKeys: nil)) ?? []
+            
+            for wav in allRecordings where wav.pathExtension == "wav" && !wav.lastPathComponent.contains(".mic.") {
+                let baseName = wav.deletingPathExtension().lastPathComponent
+                
+                let hasTranscript = allTranscripts.contains { $0.lastPathComponent.starts(with: baseName) }
+                let hasStatus = allStatuses.contains { $0.lastPathComponent.starts(with: baseName) }
+                
+                if !hasTranscript && !hasStatus {
+                    if let attr = try? FileManager.default.attributesOfItem(atPath: wav.path),
+                       let modDate = attr[.modificationDate] as? Date,
+                       Date().timeIntervalSince(modDate) > 60 {
+                        self.launchTranscription(for: wav)
+                    }
+                }
+            }
+        }
+
         // Asked once, up front, so the first recording is not the thing that
         // triggers a permission dialog mid-meeting. Denial is survivable: the
         // call still gets recorded, just without your own clean track.

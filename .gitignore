@@ -4,3 +4,4 @@ Recordings/*
 vendor/*
 .DS_Store
 .hf_token
+.gemini_token

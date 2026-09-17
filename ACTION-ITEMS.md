@@ -1,13 +1,22 @@
 # Meetings and Action Items
-_Last updated: 2026-09-16 08:49_
+_Last updated: 2026-09-16 22:19_
 
-## General Call with Sakcham — 2026-09-16
+## Untitled meeting — 2026-09-04
 
-[Full summary](Summaries/2026-09-16_15-56-50__general-call-with-sakcham.md)
+[Full summary](Summaries/2026-09-04_10-32-41__untitled-meeting.md)
 
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Kaushik | Apply for client visit auxiliary in Zoho. | Not stated | notes | high |
+| Unassigned | Further discussion on whether to remove certain features out of the box. | Not stated | notes | medium |
+
+## Call with Ravi to Update the Status of Gold Table Recon in the Heatmap Tracker — 2026-09-16
+
+[Full summary](Summaries/2026-09-16_21-49-51__call-with-ravi-to-update-the-status-of-g.md)
+
+| Owner | Action | Due | Source | Confidence |
+| --- | --- | --- | --- | --- |
+| Kaushik | Update the validation statuses for majority of goal tables in the report tracker. | Not stated | notes | high |
+| Mohit | Provide a detailed update on oil trading recon status by tomorrow morning or afternoon. | 2026-09-17 | transcript | medium |
 ## Untitled meeting — 
 
 [Full summary](Summaries/test_loop_clip__untitled-meeting.md)
@@ -52,15 +61,13 @@ _Last updated: 2026-09-16 08:49_
 | Rajeshwari | Confirm groupings by tomorrow's call | Not stated | notes | medium |
 | Manjeet | Communicate with users about freezing report updates one week prior to UAT | Not stated | notes | high |
 | Kaushik | Respond to Tommy’s comments on incremental data validation and schedule a meeting for further discussion | Not stated | transcript, notes | high |
-## Call with Ravi to Discuss Ventura Foods Hours being Charged — 2026-09-11
+## Fattie check — 2026-09-11
 
-[Full summary](Summaries/2026-09-11_11-53-50__call-with-ravi-to-discuss-ventura-foods.md)
+[Full summary](Summaries/2026-09-11_21-33-26__fattie-check.md)
 
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Kaushik | Reallocate hours accordingly: 120 to Snowflake and 40 to Elevate. | Not stated | notes | high |
-| Ravi | Include Kaushik in the AIOps proposal development for Ventura Foods. | Not stated | transcript | medium |
-
+| Not assigned | Test transcription tool functionality | Not stated | transcript | low |
 ## Call with Sayli and Arunkumar to discuss Report QA — 2026-09-11
 
 [Full summary](Summaries/2026-09-11_11-02-09__call-with-sayli-and-arunkumar-to-discuss.md)
@@ -214,24 +221,14 @@ _Last updated: 2026-09-16 08:49_
 | Team | Update conference page links | Not stated | Transcript | Low |
 | Team | Provide status to Gayatri (note: at least one more day needed) | By end of day | Transcript | Medium |
 
-## Evening scrum call WD DMOD — 2026-08-26
+## Untitled meeting — 2026-08-26
 
-[Full summary](Summaries/2026-08-26_21-32-40__evening-scrum-call-wd-dmod.md)
+[Full summary](Summaries/2026-08-26_12-49-55__untitled-meeting.md)
 
 | Owner | Action | Due | Source | Confidence |
-|---|---|---|---|---|
-| Trinadh | Finish PO column work | Tomorrow (all day) | transcript | high |
-| Trinadh | Get full D/F table update code from Fanny; escalate to Zabi if not received by tomorrow morning | Tomorrow morning | transcript | high |
-| Trinadh | Move into CDC after PO closes | 28th | transcript | high |
-| Trinadh | Ask whether Fanny/team can push testing prioritization based on actual Power BI column usage | Not stated | transcript | medium |
-| Abhay | Validate the supplier table (coding already done by Trinadh) | Not stated | transcript | high |
-| Abhay | Finalize Dim Organization full-load write-up, color-code it with the other full-load table, and confirm with Fanny | Not stated | transcript | medium |
-| Abhay | Complete Employee and Fact Purchase Requisition Line coding and validation | 28th (first half) | transcript | high |
-| Abhay | Complete Fact Invoice Receipt Line coding and validation, scope depending on issues found | Not stated | transcript | medium |
-| Gayatri | Set up time with Zabi to flag dependencies and unresolved QTest/scope issues | Tomorrow | transcript | high |
-| Gayatri (via Trinadh) | Connect with Fanny tonight and again tomorrow if unavailable | Tonight / tomorrow | transcript | high |
-| Shubham (assigned by Gayatri, not present) | Wrap up AP transaction, then Fact Daily Exchange, Fact Global Exchange, and Open IRGR-related issues | Today/tomorrow (28th likely) | transcript | medium |
-
+| --- | --- | --- | --- | --- |
+| Speaker 1 | Fix issues encountered in testing for DIMM supplier site code. | Today EOD | transcript | low |
+| Speaker 1 | Move forward with organization and supplier site tasks after resolving testing issues. | Today EOD | notes | medium |
 ## Untitled meeting — 2026-08-26
 
 [Full summary](Summaries/2026-08-26_21-05-08__untitled-meeting.md)

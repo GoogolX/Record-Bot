@@ -1,65 +1,25 @@
 {
-  "timestamp": "2026-09-11_20-41-36",
-  "backend": "local",
-  "model": "llama3.1:8b",
-  "avg_latency": 49.314427296320595,
-  "overall_speaker_accuracy": 76.92307692307693,
-  "overall_action_recall": 0.0,
+  "timestamp": "2026-09-16_23-24-05",
+  "backend": "gemini",
+  "model": "qwen2.5:14b",
+  "avg_latency": 0.00010371208190917969,
+  "overall_speaker_accuracy": 100.0,
+  "overall_action_recall": 100.0,
   "results": [
     {
       "id": "2026-08-26_21-32-40",
-      "latency": 47.67325401306152,
-      "speaker_accuracy_pct": 33.33333333333333,
-      "speaker_hits": 1,
-      "speaker_target": 3,
-      "action_recall_pct": 0.0,
-      "action_hits": 0,
-      "action_target": 3,
-      "predicted_speakers": {
-        "Speaker 1": "Gayatri (high)"
-      },
-      "speaker_evidence": {
-        "Speaker 1": "Identified as Gayatri based on user metadata and consistent speaking pattern throughout the meeting."
-      }
+      "status": "FAILED",
+      "latency": 0.00021195411682128906
     },
     {
       "id": "2026-08-26_12-53-10",
-      "latency": 49.18461585044861,
-      "speaker_accuracy_pct": 80.0,
-      "speaker_hits": 4,
-      "speaker_target": 5,
-      "action_recall_pct": 0.0,
-      "action_hits": 0,
-      "action_target": 3,
-      "predicted_speakers": {
-        "Speaker 1": "Sharath (high)",
-        "Speaker 2": "Trinadh (low)",
-        "Speaker 3": "Gayatri (medium)",
-        "Speaker 5": "Abhay (medium)"
-      },
-      "speaker_evidence": {
-        "Speaker 1": "Identified as Sharath based on consistent naming and high confidence level."
-      }
+      "status": "FAILED",
+      "latency": 5.1021575927734375e-05
     },
     {
       "id": "2026-08-26_21-05-08",
-      "latency": 51.08541202545166,
-      "speaker_accuracy_pct": 100.0,
-      "speaker_hits": 5,
-      "speaker_target": 5,
-      "action_recall_pct": 0.0,
-      "action_hits": 0,
-      "action_target": 3,
-      "predicted_speakers": {
-        "Speaker 1": "Ravi (high)",
-        "Speaker 2": "Lakshmi (high)",
-        "Speaker 3": "Rajeshwari (high)",
-        "Speaker 4": "Manjeet (high)",
-        "Speaker 5": "Arvind (medium)"
-      },
-      "speaker_evidence": {
-        "Speaker 1": "Identified as Ravi through metadata and consistent naming convention"
-      }
+      "status": "FAILED",
+      "latency": 4.8160552978515625e-05
     }
   ]
 }
