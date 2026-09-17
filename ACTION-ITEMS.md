@@ -1,5 +1,15 @@
 # Meetings and Action Items
-_Last updated: 2026-09-16 22:19_
+_Last updated: 2026-09-17 14:53_
+
+## VF morning Standup and Report Testing Standup — 2026-09-17
+
+[Full summary](Summaries/2026-09-17_09-37-33__vf-morning-standup-and-report-testing-st.md)
+
+| Owner | Action | Due | Source | Confidence |
+| --- | --- | --- | --- | --- |
+| Kaushik | Ensure PCS data availability and test reports | Not stated | notes | high |
+| Ravi | Discuss query compatibility with team members | 18th September | transcript | medium |
+| Rajeshwari | Complete queries for TMS1 and address defects | 18th September | transcript | high |
 
 ## Untitled meeting — 2026-09-04
 

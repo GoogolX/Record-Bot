@@ -47,6 +47,26 @@ stage() {
   log "$1 $BASE (pid $$)"
 }
 
+
+empty_transcript_exit() {
+  log "INFO  whisper produced an empty transcript. Creating a silent meeting placeholder."
+  DEST="$HOME_DIR/Transcripts/${BASE}__silent-recording.md"
+  cat << 'MARKDOWN' > "$DEST"
+---
+title: "Silent Recording"
+recorded: "$START_EPOCH"
+status: no-speech-detected
+---
+
+## Transcript
+No human speech was detected in this recording.
+MARKDOWN
+  rm -f "$STATUS_DIR/$BASE.failed"
+  rm -f "$STATUS_DIR/$BASE.status"
+  log "DONE  $BASE -> Transcripts/${BASE}__silent-recording.md (0 words, took $(( $(date +%s) - START_EPOCH ))s)"
+  exit 0
+}
+
 fail() {
   printf '%s\n' "$1" > "$STATUS_DIR/$BASE.failed"
   rm -f "$STATUS_DIR/$BASE.status"
@@ -166,10 +186,10 @@ if [ ! -s "$WORK/system.txt" ]; then
       cp "$WORK/mic16.wav" "$WORK/system16.wav"
       MIC="" # Disable secondary mic logic since mic is now the primary track
     else
-      fail "whisper produced an empty transcript on both system and mic tracks"
+      empty_transcript_exit
     fi
   else
-    fail "whisper produced an empty transcript"
+    empty_transcript_exit
   fi
 else
   if [ -n "$MIC" ]; then
