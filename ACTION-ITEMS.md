@@ -7,10 +7,10 @@ _Last updated: 2026-09-18 10:19_
 
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Tarun | Check exact view names and execute queries again to identify pending views. | Not stated | notes | medium |
-| Rajeshwari | Test PCS funds as requested by Kaushik. | Not stated | notes | low |
-| Atul | Create necessary views for TCS reports by afternoon. | Today | notes | high |
-
+| Tarun | Check exact view names needed for PCS projects and update Rajeshwari. | Not stated | notes | high |
+| Arun | Check the tier credit financials if bandwidth allows. | Not stated | transcript | medium |
+| Kaushik | Follow up on assigning defects to appropriate team members. | Not stated | notes | high |
+| Atul | Create views by afternoon for TCS reports identified as needing them. | Today | notes | high |
 ## Evening Report QA Standup Call — 2026-09-17
 
 [Full summary](Summaries/2026-09-17_20-32-41__evening-report-qa-standup-call.md)

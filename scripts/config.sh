@@ -49,7 +49,7 @@ SUMMARIZER_BACKEND="local"
 # Local LLM model in Ollama:
 #   qwen2.5:14b  high quality 14B model (flawless speaker resolution & actions)
 #   llama3.1:8b  fast 8B model
-LOCAL_LLM_MODEL="qwen2.5:14b"
+LOCAL_LLM_MODEL="ternary-bonsai:27b"
 
 # Ollama server endpoint
 OLLAMA_HOST="http://localhost:11434"
