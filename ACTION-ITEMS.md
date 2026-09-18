@@ -1,16 +1,25 @@
 # Meetings and Action Items
-_Last updated: 2026-09-17 14:53_
+_Last updated: 2026-09-18 10:19_
 
-## VF morning Standup and Report Testing Standup — 2026-09-17
+## Morning Report Testing Standup — 2026-09-18
 
-[Full summary](Summaries/2026-09-17_09-37-33__vf-morning-standup-and-report-testing-st.md)
+[Full summary](Summaries/2026-09-18_10-01-29__morning-report-testing-standup.md)
 
 | Owner | Action | Due | Source | Confidence |
 | --- | --- | --- | --- | --- |
-| Kaushik | Ensure PCS data availability and test reports | Not stated | notes | high |
-| Ravi | Discuss query compatibility with team members | 18th September | transcript | medium |
-| Rajeshwari | Complete queries for TMS1 and address defects | 18th September | transcript | high |
+| Tarun | Check exact view names and execute queries again to identify pending views. | Not stated | notes | medium |
+| Rajeshwari | Test PCS funds as requested by Kaushik. | Not stated | notes | low |
+| Atul | Create necessary views for TCS reports by afternoon. | Today | notes | high |
 
+## Evening Report QA Standup Call — 2026-09-17
+
+[Full summary](Summaries/2026-09-17_20-32-41__evening-report-qa-standup-call.md)
+
+| Owner | Action | Due | Source | Confidence |
+| --- | --- | --- | --- | --- |
+| Rajeshwari | Check with Mohit on why views are not being created and communicate findings. | Not stated | notes | high |
+| Arun | Upload the oil contract balance report document and change status to passed in tracker. | Not stated | transcript | medium |
+| Kaushik | Maintain a centralized list of tables and views needed for unblocking reports, prioritize critical ones, and communicate with Ravi on MTM fact progress. | Not stated | notes | high |
 ## Untitled meeting — 2026-09-04
 
 [Full summary](Summaries/2026-09-04_10-32-41__untitled-meeting.md)

@@ -198,7 +198,7 @@ def is_acoustic_bleed(start, end, text, mic, mic_rate, system, system_rate, offs
         return True
 
     m_rms = rms(mic, mic_rate, start - offset, end - offset) if mic is not None else None
-    if m_rms is None or m_rms < MIC_MIN_RMS:
+    if m_rms is None or m_rms < 0.005:
         return True
 
     if system is None or not system_segments:
@@ -229,11 +229,8 @@ def is_acoustic_bleed(start, end, text, mic, mic_rate, system, system_rate, offs
         if s_rms >= 0.035 and (bg_ratio >= 0.15 or word_ratio >= 0.40):
             return True
 
-    # Energy-based bleed
-    if s_rms >= 0.035 and diff_db < -1.0:
-        return True
-    if s_rms >= 0.05 and diff_db < 2.0:
-        return True
+    # Removed energy-based bleed filter. If the mic text doesn't strongly overlap
+    # with the system track text, it is genuine cross-talk, not acoustic bleed.
 
     return False
 
