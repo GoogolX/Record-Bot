@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from parse import load_summary, load_transcript, parse_action_table, stem_meeting_id  # noqa: E402
 
-ALLOWED_STATUS = {"awaiting-summary", "summarized", "skipped"}
+ALLOWED_STATUS = {"awaiting-summary", "summarized", "skipped", "no-speech-detected"}
 REQUIRED_HEADER = {"title", "recorded", "status", "duration_seconds", "model", "language"}
 REQUIRED_ACTION_COLS = {"owner", "action", "due", "source", "confidence"}
 

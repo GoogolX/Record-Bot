@@ -56,6 +56,9 @@ empty_transcript_exit() {
 title: "Silent Recording"
 recorded: "$START_EPOCH"
 status: no-speech-detected
+duration_seconds: 0
+model: "none"
+language: "en"
 ---
 
 ## Transcript

@@ -155,7 +155,8 @@ class AcousticBleedTests(unittest.TestCase):
                 1.0, 5.0, "muffled speech picked up faintly",
                 mic, mrate, system, srate, 0.0, sys_segs
             )
-            self.assertTrue(bleed)
+            # Energy bleed filter removed; this cross-talk is now preserved as genuine.
+            self.assertFalse(bleed)
 
     def test_silent_mic_filtered_as_bleed_or_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
