@@ -75,6 +75,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
 
+        // Auto-rescue any orphaned recordings that never launched
+        DispatchQueue.global(qos: .background).async {
+            let allRecordings = (try? FileManager.default.contentsOfDirectory(at: self.recordingsDir, includingPropertiesForKeys: nil)) ?? []
+            let allTranscripts = (try? FileManager.default.contentsOfDirectory(at: self.transcriptsDir, includingPropertiesForKeys: nil)) ?? []
+            let allStatuses = (try? FileManager.default.contentsOfDirectory(at: self.statusDir, includingPropertiesForKeys: nil)) ?? []
+            
+            for wav in allRecordings where wav.pathExtension == "wav" && !wav.lastPathComponent.contains(".mic.") {
+                let baseName = wav.deletingPathExtension().lastPathComponent
+                
+                let hasTranscript = allTranscripts.contains { $0.lastPathComponent.starts(with: baseName) }
+                let hasStatus = allStatuses.contains { $0.lastPathComponent.starts(with: baseName) }
+                
+                if !hasTranscript && !hasStatus {
+                    if let attr = try? FileManager.default.attributesOfItem(atPath: wav.path),
+                       let modDate = attr[.modificationDate] as? Date,
+                       Date().timeIntervalSince(modDate) > 60 {
+                        self.launchTranscription(for: wav)
+                    }
+                }
+            }
+        }
+
         // Asked once, up front, so the first recording is not the thing that
         // triggers a permission dialog mid-meeting. Denial is survivable: the
         // call still gets recorded, just without your own clean track.
@@ -237,7 +259,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(header("Summaries"))
         menu.addItem(disabled(waiting == 0
             ? "  All caught up"
-            : "  \(waiting) transcript\(waiting == 1 ? "" : "s") awaiting Claude"))
+            : "  \(waiting) transcript\(waiting == 1 ? "" : "s") awaiting Summary"))
 
         menu.addItem(.separator())
 
@@ -245,6 +267,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             ("Pause Transcription/Summarisation", #selector(pauseProcessing)),
             ("Resume Transcription/Summarisation", #selector(resumeProcessing)),
             ("Open Transcripts Folder", #selector(openTranscripts)),
+            ("Open Summaries Folder", #selector(openSummaries)),
             ("Open Action Items", #selector(openActionItems)),
             ("Open Log", #selector(openLog))
         ] {
@@ -297,6 +320,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSWorkspace.shared.open(transcriptsDir)
     }
 
+    @objc private func openSummaries() {
+        let summariesDir = home.appendingPathComponent("Summaries")
+        NSWorkspace.shared.open(summariesDir)
+    }
+
     @objc private func openActionItems() {
         if !FileManager.default.fileExists(atPath: actionItemsFile.path) {
             try? "# Action Items\n\nNothing yet.\n".write(to: actionItemsFile, atomically: true, encoding: .utf8)
@@ -346,6 +374,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // Send SIGSTOP (like Ctrl+Z) to freeze the processes in place
             process.arguments = ["-c", "pkill -STOP -f transcribe.sh; pkill -STOP -f whisper-cli; pkill -STOP -f summarize.py; curl -s -X POST http://localhost:11434/api/generate -d '{\"model\": \"qwen2.5:14b\", \"keep_alive\": 0}' > /dev/null &"]
             try? process.run()
+            process.waitUntilExit()
             
             Task { @MainActor in
                 report(title: "Processing Paused", body: "Tasks suspended (Ctrl+Z). Memory will swap to disk.")
@@ -361,9 +390,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // Send SIGCONT to resume the processes
             process.arguments = ["-c", "pkill -CONT -f transcribe.sh; pkill -CONT -f whisper-cli; pkill -CONT -f summarize.py"]
             try? process.run()
+            process.waitUntilExit()
             
             Task { @MainActor in
-                report(title: "Processing Resumed", body: "Suspended tasks have been resumed.")
+                report(title: "Processing Resumed", body: "Tasks resumed from where they left off.")
                 refreshTitle()
             }
         }
@@ -421,14 +451,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// Asks what the meeting was, right after stopping, while it's still fresh.
-    /// The answers go in a sidecar .meta file that the transcript inherits, so Claude
+    /// The answers go in a sidecar .meta file that the transcript inherits, so the LLM
     /// summarizes with some idea of who was talking and why.
     /// Returns true if transcription should proceed, or false if discarded.
     private func askForContext(about wav: URL) -> Bool {
         let alert = NSAlert()
         alert.messageText = "What was this meeting?"
         alert.informativeText = "All of this is optional. Anything you fill in gets handed "
-            + "to Claude along with the transcript."
+            + "to the LLM along with the transcript."
         alert.addButton(withTitle: "Save")
         alert.addButton(withTitle: "Skip")
         alert.addButton(withTitle: "Discard")

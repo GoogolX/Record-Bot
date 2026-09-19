@@ -10,7 +10,7 @@ import QuartzCore
 /// after it has been through a conferencing codec and back.
 final class MicRecorder {
 
-    private let engine = AVAudioEngine()
+    private var engine = AVAudioEngine()
     private let lock = NSLock()
     private var file: AVAudioFile?
     private var destination: URL?
@@ -23,6 +23,10 @@ final class MicRecorder {
         // Idempotent: installing a second tap on an already-tapped bus raises an
         // ObjC exception that no Swift catch can see, which would take the app down.
         teardownEngine()
+        
+        // Recreate the engine entirely for every recording to prevent internal state corruption 
+        // or ghost taps from persisting across audio device changes (which cause uncatchable crashes).
+        engine = AVAudioEngine()
 
         let input = engine.inputNode
         // The tap validates against the node's OUTPUT bus, not the hardware input

@@ -1,7 +1,7 @@
 Recordings/*
-Transcripts/*
-Summaries*/
 *.wav
 *.log
-ACTION-ITEMS.md
 vendor/*
+.DS_Store
+.hf_token
+.gemini_token

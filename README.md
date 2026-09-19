@@ -1,9 +1,16 @@
 # RecordBot
 
 A menu bar app that records whatever audio is playing on your Mac, transcribes it locally,
+<<<<<<< HEAD
 and hands the text to a local LLM (Ollama) for summaries and a running action-items list.
 
 Nothing here talks to a paid API. Whisper runs on your machine; the summarizing runs instantly and entirely locally via Ollama.
+=======
+and hands the text to a local LLM for summaries and a running action-items list.
+
+Nothing here talks to a paid API. Whisper runs on your machine; the summarizing runs inside
+Ollama instantly in the background.
+>>>>>>> fix/dictation-mode
 
 ## Install
 
@@ -125,7 +132,7 @@ Three ways, in increasing detail.
 (`queued`, `converting`, `transcribing`, `writing`), PID, and elapsed time. Click any
 running job to cancel it immediately. Failed jobs appear with a Retry entry; hover
 to see the failure reason. Below that, a Summaries section shows how many transcripts
-are still waiting to be summarized.
+are still awaiting summarization.
 
 **The terminal.**
 
@@ -169,7 +176,7 @@ Changing the model means re-running `scripts/setup.sh` to fetch it.
 
 ## The Summarizer (Local LLM)
 
-As soon as the audio transcription finishes, `transcribe.sh` automatically kicks off `summarize.py` to hit your local Ollama LLM (default `qwen2.5:14b`). For each transcript marked `status: awaiting-summary`, it immediately writes one file into `Summaries/` covering that meeting alone: what it was for, what was covered, decisions, an action table with owners and a confidence column, open questions, and a note on transcript quality when the audio was rough. Then it adds a section for that meeting to `ACTION-ITEMS.md` and flips the status so nothing is processed twice.
+As soon as the audio transcription finishes, `transcribe.sh` automatically kicks off `summarize.py` to hit your local Ollama LLM (default `ternary-bonsai:27b`). For each transcript marked `status: awaiting-summary`, it immediately writes one file into `Summaries/` covering that meeting alone: what it was for, what was covered, decisions, an action table with owners and a confidence column, open questions, and a note on transcript quality when the audio was rough. Then it adds a section for that meeting to `ACTION-ITEMS.md` and flips the status so nothing is processed twice.
 
 Nothing is merged across meetings. `ACTION-ITEMS.md` is an index of per-meeting tables, so a commitment made in one call never gets silently blended with a similar one from another.
 
