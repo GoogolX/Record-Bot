@@ -1,8 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$HERE/.." && pwd)"
 TMP="$HERE/.test-tmp/integration"
 export QUEUE_ROOT="$TMP"
+export QUEUE_TRANSCRIBE_SCRIPT="$HERE/scripts/transcribe.sh"
+export QUEUE_SUMMARIZE_SCRIPT="$HERE/scripts/summarize.py"
 export MOCK_JOB_SECONDS=0.05
 trap 'rm -rf "$TMP"' EXIT
 rm -rf "$TMP"
@@ -10,10 +13,10 @@ mkdir -p "$TMP/Recordings" "$TMP/Transcripts" "$TMP/Summaries"
 touch "$TMP/Recordings/2026-02-01_09-00-00.wav" \
       "$TMP/Recordings/2026-02-01_09-00-00.mic.wav" \
       "$TMP/Recordings/2026-02-01_09-01-00.wav"
-printf 'existing transcript\n' > "$TMP/Transcripts/2026-02-01_08-00-00__already-done.md"
+printf '%s\n' '---' 'status: awaiting-summary' '---' 'existing transcript' > "$TMP/Transcripts/2026-02-01_08-00-00__already-done.md"
 
-mgr="$HERE/scripts/queue_manager.sh"
-processor="$HERE/scripts/process_queue.sh"
+mgr="$PROJECT_ROOT/scripts/queue_manager.sh"
+processor="$PROJECT_ROOT/scripts/process_queue.sh"
 state="$TMP/.state/status.json"
 
 "$mgr" count >/dev/null
@@ -36,6 +39,7 @@ d=json.load(open(sys.argv[1])); root=pathlib.Path(sys.argv[2])
 assert d['pending_transcribe'] == 0, d
 assert d['pending_summarize'] == 3, d
 assert d['status'] == 'idle' and not d['transcribe_progress'], d
+assert not list((root/'Summaries').glob('*.md')), 'transcription auto-ran summary'
 assert (root/'Transcripts/2026-02-01_09-00-00__mock-title.md').is_file()
 assert (root/'Transcripts/2026-02-01_09-01-00__mock-title.md').is_file()
 assert not (root/'Transcripts/2026-02-01_09-00-00.mic__mock-title.md').exists()

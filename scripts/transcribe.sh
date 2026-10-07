@@ -1,7 +1,7 @@
 #!/bin/bash
 # Turns one recording into a speaker-attributed transcript.
 #
-# Called by the menu bar app after each stop, and safe to run by hand:
+# Called by the manual processing queue, and safe to run by hand:
 #   ./scripts/transcribe.sh Recordings/2026-08-25_14-30-00.wav
 #
 # Pipeline: convert both tracks to 16 kHz mono, transcribe each with whisper.cpp,
@@ -339,14 +339,8 @@ OUT="$HOME_DIR/Transcripts/${BASE}__${SLUG}.md"
   fi
 } > "$OUT"
 
-# ---- 6. Summarize -----------------------------------------------------------
-if [ -x "$VENV_PY" ]; then
-  stage summarizing
-  "$VENV_PY" "$HOME_DIR/scripts/summarize.py" --file "$OUT" >>"$LOG" 2>&1 || log "WARN  summarization failed"
-fi
-
 ELAPSED=$(( $(date +%s) - START_EPOCH ))
-log "DONE  $BASE -> Transcripts/$(basename "$OUT") ($(wc -w < "$OUT" | tr -d ' ') words, took ${ELAPSED}s)"
+log "DONE  $BASE -> Transcripts/$(basename "$OUT") ($(wc -w < "$OUT" | tr -d ' ') words, took ${ELAPSED}s); awaiting manual summary"
 rm -f "$STATUS_DIR/$BASE.status"
 
 # Sidecars go with the audio, never before it: keeping the audio without its

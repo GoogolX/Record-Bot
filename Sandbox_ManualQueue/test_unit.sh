@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$HERE/.." && pwd)"
 TMP="$HERE/.test-tmp/unit"
 trap 'rm -rf "$TMP"' EXIT
 rm -rf "$TMP"
@@ -9,11 +10,23 @@ touch "$TMP/Recordings/2026-01-01_10-00-00.wav" \
       "$TMP/Recordings/2026-01-01_10-00-00.mic.wav" \
       "$TMP/Recordings/2026-01-01_10-00-01.wav" \
       "$TMP/Recordings/meeting with spaces.wav"
-touch "$TMP/Transcripts/2026-01-01_10-00-00__planning.md" \
-      "$TMP/Transcripts/2026-01-01_10-00-010__prefix-collision.md"
+printf '%s\n' '---' 'status: awaiting-summary' '---' > "$TMP/Transcripts/2026-01-01_10-00-00__planning.md"
+printf '%s\n' '---' 'status: awaiting-summary' '---' > "$TMP/Transcripts/2026-01-01_10-00-010__prefix-collision.md"
 touch "$TMP/Summaries/2026-01-01_10-00-00__planning.md"
 
-mgr="$HERE/scripts/queue_manager.sh"
+mgr="$PROJECT_ROOT/scripts/queue_manager.sh"
+app_source="$PROJECT_ROOT/Sources/RecordBot/App.swift"
+transcribe_source="$PROJECT_ROOT/scripts/transcribe.sh"
+
+if grep -q 'launchTranscription(for:' "$app_source"; then
+    echo "FAIL: app still has a direct transcription launch path"; exit 1
+fi
+if grep -q 'scripts/summarize.py' "$transcribe_source"; then
+    echo "FAIL: transcription script still auto-starts summarization"; exit 1
+fi
+grep -q 'Transcribe Pending (' "$app_source" || { echo "FAIL: missing manual transcription menu action"; exit 1; }
+grep -q 'Summarize Pending (' "$app_source" || { echo "FAIL: missing manual summary menu action"; exit 1; }
+
 actual="$(QUEUE_ROOT="$TMP" "$mgr" list_transcribe)"
 [[ "$actual" == *"2026-01-01_10-00-01"* ]] || { echo "FAIL: missing pending wav: $actual"; exit 1; }
 [[ "$actual" == *"meeting with spaces"* ]] || { echo "FAIL: spaces mishandled: $actual"; exit 1; }

@@ -1,16 +1,7 @@
 # RecordBot
 
 A menu bar app that records whatever audio is playing on your Mac, transcribes it locally,
-<<<<<<< HEAD
-and hands the text to a local LLM (Ollama) for summaries and a running action-items list.
-
-Nothing here talks to a paid API. Whisper runs on your machine; the summarizing runs instantly and entirely locally via Ollama.
-=======
-and hands the text to a local LLM for summaries and a running action-items list.
-
-Nothing here talks to a paid API. Whisper runs on your machine; the summarizing runs inside
-Ollama instantly in the background.
->>>>>>> fix/dictation-mode
+then lets you manually batch transcription and summarization from the menu bar.
 
 ## Install
 
@@ -52,13 +43,10 @@ When you stop, a panel appears with four optional fields:
   says whether it came from your notes, the transcript, or both.
 
 Hit Skip and it files as "Untitled meeting". Hit Discard and the recording is
-immediately removed without transcribing. Your notes are worth typing even when the
-audio was bad, since a meeting with good notes and unusable speech still gets a real
-summary.
-
-Then the app fires the transcription in the background and gets out of the way.
-A 45-minute meeting takes roughly two to four minutes to transcribe on Apple Silicon with
-the small model. You can start another recording while one is transcribing.
+immediately removed. Otherwise it stays queued until you choose **Transcribe Pending**
+from the menu. Recordings are processed sequentially and silently in the background.
+When transcription finishes, the menu shows the number of transcripts waiting for
+summarization; choose **Summarize Pending** when you are ready to run those jobs.
 
 ## Speakers
 
@@ -128,11 +116,11 @@ Three ways, in increasing detail.
 **Menu bar title.** `◉` idle, `● 4:12` recording, `⋯` while a transcription runs,
 `⋯3` for three of them, `⚠` when one failed.
 
-**The dropdown.** A Transcription section lists each running job with its stage
-(`queued`, `converting`, `transcribing`, `writing`), PID, and elapsed time. Click any
-running job to cancel it immediately. Failed jobs appear with a Retry entry; hover
-to see the failure reason. Below that, a Summaries section shows how many transcripts
-are still awaiting summarization.
+**The dropdown.** Transcribe Pending and Summarize Pending show live queue counts and
+overall progress. The Transcription section lists each running job with its stage
+(`queued`, `converting`, `transcribing`, `writing`), PID, and elapsed time. Failed jobs
+appear with a Retry entry; hover to see the failure reason. Open Queue Log shows the
+batch history and worker output.
 
 **The terminal.**
 
@@ -176,18 +164,23 @@ Changing the model means re-running `scripts/setup.sh` to fetch it.
 
 ## The Summarizer (Local LLM)
 
-As soon as the audio transcription finishes, `transcribe.sh` automatically kicks off `summarize.py` to hit your local Ollama LLM (default `ternary-bonsai:27b`). For each transcript marked `status: awaiting-summary`, it immediately writes one file into `Summaries/` covering that meeting alone: what it was for, what was covered, decisions, an action table with owners and a confidence column, open questions, and a note on transcript quality when the audio was rough. Then it adds a section for that meeting to `ACTION-ITEMS.md` and flips the status so nothing is processed twice.
+Transcription only writes the transcript. It does not start the summarizer. When you
+choose **Summarize Pending**, `process_queue.sh` runs `summarize.py` sequentially for
+transcripts marked `status: awaiting-summary`. Each job writes a meeting summary and
+updates `ACTION-ITEMS.md`.
 
 Nothing is merged across meetings. `ACTION-ITEMS.md` is an index of per-meeting tables, so a commitment made in one call never gets silently blended with a similar one from another.
 
 Because Ollama runs locally, memory is automatically flushed immediately after completion (`keep_alive: 0`) so your RAM footprint returns to normal.
 
-You can also run the summarizer manually at any time or override the backend:
+You can run either queue manually or run the summarizer for one transcript:
 
 ```bash
-./scripts/summarize.py                  # summarizes any pending transcript using GEMINI_API_KEY or ANTHROPIC_API_KEY
-./scripts/summarize.py --prompt-only    # prints formatted schema prompt for any web LLM
-./scripts/summarize.py --dry-run        # previews summary without modifying files
+./scripts/process_queue.sh transcribe
+./scripts/process_queue.sh summarize
+./scripts/summarize.py --file Transcripts/<meeting>.md
+./scripts/summarize.py --prompt-only
+./scripts/summarize.py --dry-run
 ```
 
 ## Troubleshooting
