@@ -392,6 +392,28 @@ def update_transcript_header(
     # Update status to summarized
     header = re.sub(r"^status:.*$", "status: summarized", header, flags=re.MULTILINE)
 
+    # The diarizer writes stable labels (Speaker 1, Speaker 2, etc.) with "?"
+    # placeholders. The summarizer resolves those labels, so persist its names
+    # into the transcript map as well as the summary; otherwise every future
+    # quality audit and summary still sees the original placeholders.
+    updated_lines = []
+    in_speakers = False
+    for line in header.splitlines():
+        if line.startswith("speakers:"):
+            in_speakers = True
+            updated_lines.append(line)
+            continue
+        if in_speakers and line and not line.startswith((" ", "\t")):
+            in_speakers = False
+        if in_speakers:
+            match = re.match(r'^(\s*-\s*"(?P<label>[^"]+)":\s*)"(?P<value>(?:\\.|[^"])*)"(?P<tail>.*)$', line)
+            resolved = speakers.get(match.group("label")) if match else None
+            if match and resolved and resolved.strip():
+                escaped = resolved.strip().replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+                line = f'{match.group(1)}"{escaped}"{match.group("tail")}'
+        updated_lines.append(line)
+    header = "\n".join(updated_lines)
+
     # Insert evidence if speakers found
     if evidence and "speaker_evidence:" not in header:
         ev_lines = ["speaker_evidence:"]
