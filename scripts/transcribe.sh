@@ -108,7 +108,7 @@ rm -f "$STATUS_DIR/$BASE.failed"
 stage queued
 
 MODEL="$WHISPER_DIR/models/$WHISPER_MODEL"
-BIN="$WHISPER_DIR/build/bin/whisper-cli"
+BIN="${WHISPER_BIN:-$WHISPER_DIR/build/bin/whisper-cli}"
 [ -x "$BIN" ] || BIN="$WHISPER_DIR/build/bin/main"
 
 [ -x "$BIN" ]   || fail "whisper binary missing, run scripts/setup.sh"
@@ -220,8 +220,16 @@ if [ "$DIARIZE" != "no" ]; then
          >>"$LOG" 2>&1; then
       DIAR_OK="yes"
     else
-      log "WARN  diarization failed, falling back to an unattributed transcript"
-      [ "$DIARIZE" = "yes" ] && fail "diarization failed and DIARIZE is set to yes"
+      DIAR_RESULT=$?
+      log "WARN  diarization auto/MPS attempt failed (exit $DIAR_RESULT); retrying on CPU"
+      if HF_TOKEN="$(cat "$TOKEN_FILE")" "$VENV_PY" "$HOME_DIR/scripts/diarize.py" "$@" --device cpu \
+           >>"$LOG" 2>&1; then
+        DIAR_OK="yes"
+      else
+        DIAR_CPU_RESULT=$?
+        log "WARN  CPU diarization retry failed (exit $DIAR_CPU_RESULT); falling back to an unattributed transcript"
+        [ "$DIARIZE" = "yes" ] && fail "diarization failed on automatic and CPU devices"
+      fi
     fi
   elif [ "$DIARIZE" = "yes" ]; then
     fail "DIARIZE=yes but diarization is not installed, run scripts/setup-diarization.sh"
