@@ -19,6 +19,21 @@ struct JobStatus {
     }
 }
 
+private struct QueueStatus: Decodable {
+    let status: String
+    let transcribe_progress: String
+    let summarize_progress: String
+    let pending_transcribe: Int
+    let pending_summarize: Int
+}
+
+private enum SaveChoice: Equatable {
+    case save
+    case saveAndTranscribe
+    case skip
+    case discard
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
@@ -28,6 +43,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hotKey: HotKey?
     private var startedAt: Date?
     private var tickTimer: Timer?
+    private var queueRefreshTimer: Timer?
+    private var cachedQueue = QueueStatus(
+        status: "idle", transcribe_progress: "", summarize_progress: "",
+        pending_transcribe: 0, pending_summarize: 0
+    )
+    private var queueRefreshInFlight = false
+    private var queueRefreshRequested = false
 
     /// Root of the Record-Bot folder. The .app lives inside it; override with RECORDBOT_HOME.
     private lazy var home: URL = {
@@ -41,8 +63,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var transcriptsDir: URL { home.appendingPathComponent("Transcripts") }
     private var statusDir: URL { home.appendingPathComponent("Status") }
     private var actionItemsFile: URL { home.appendingPathComponent("ACTION-ITEMS.md") }
-    private var transcribeScript: URL { home.appendingPathComponent("scripts/transcribe.sh") }
+    private var queueManagerScript: URL { home.appendingPathComponent("scripts/queue_manager.sh") }
+    private var processQueueScript: URL { home.appendingPathComponent("scripts/process_queue.sh") }
     private var logFile: URL { home.appendingPathComponent("recordbot.log") }
+    private var queueLogFile: URL { home.appendingPathComponent(".state/queue.log") }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -74,27 +98,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for dir in [recordingsDir, transcriptsDir, statusDir] {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
-
-        // Auto-rescue any orphaned recordings that never launched
-        DispatchQueue.global(qos: .background).async {
-            let allRecordings = (try? FileManager.default.contentsOfDirectory(at: self.recordingsDir, includingPropertiesForKeys: nil)) ?? []
-            let allTranscripts = (try? FileManager.default.contentsOfDirectory(at: self.transcriptsDir, includingPropertiesForKeys: nil)) ?? []
-            let allStatuses = (try? FileManager.default.contentsOfDirectory(at: self.statusDir, includingPropertiesForKeys: nil)) ?? []
-            
-            for wav in allRecordings where wav.pathExtension == "wav" && !wav.lastPathComponent.contains(".mic.") {
-                let baseName = wav.deletingPathExtension().lastPathComponent
-                
-                let hasTranscript = allTranscripts.contains { $0.lastPathComponent.starts(with: baseName) }
-                let hasStatus = allStatuses.contains { $0.lastPathComponent.starts(with: baseName) }
-                
-                if !hasTranscript && !hasStatus {
-                    if let attr = try? FileManager.default.attributesOfItem(atPath: wav.path),
-                       let modDate = attr[.modificationDate] as? Date,
-                       Date().timeIntervalSince(modDate) > 60 {
-                        self.launchTranscription(for: wav)
-                    }
-                }
-            }
+        if let data = try? Data(contentsOf: home.appendingPathComponent(".state/status.json")),
+           let status = try? JSONDecoder().decode(QueueStatus.self, from: data) {
+            cachedQueue = status
+        }
+        refreshQueueCache()
+        queueRefreshTimer = Timer.scheduledTimer(withTimeInterval: 8, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.refreshQueueCache() }
         }
 
         // Asked once, up front, so the first recording is not the thing that
@@ -169,14 +179,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return result
     }
 
-    private func awaitingSummaryCount() -> Int {
-        let files = (try? FileManager.default.contentsOfDirectory(at: transcriptsDir, includingPropertiesForKeys: nil)) ?? []
-        return files.filter { $0.pathExtension == "md" }.filter { url in
-            guard let head = try? String(contentsOf: url, encoding: .utf8).prefix(400) else { return false }
-            return head.contains("status: awaiting-summary")
-        }.count
-    }
-
     // MARK: - Menu bar title
 
     private func refreshTitle() {
@@ -222,6 +224,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(disabled("Hotkey: ⌃⌥R"))
 
+        let queue = cachedQueue
+        let queueIsActive = queue.status == "transcribing" || queue.status == "summarizing"
+        menu.addItem(.separator())
+
+        let transcribeTitle = queue.status == "transcribing"
+            ? "Transcribing… \(queue.transcribe_progress)"
+            : "Transcribe Pending (\(queue.pending_transcribe))"
+        let transcribeItem = NSMenuItem(
+            title: transcribeTitle,
+            action: #selector(startTranscribing),
+            keyEquivalent: ""
+        )
+        transcribeItem.target = self
+        transcribeItem.isEnabled = !recorder.isRecording && !queueIsActive && queue.pending_transcribe > 0
+        menu.addItem(transcribeItem)
+
+        let summarizeTitle = queue.status == "summarizing"
+            ? "Summarizing… \(queue.summarize_progress)"
+            : "Summarize Pending (\(queue.pending_summarize))"
+        let summarizeItem = NSMenuItem(
+            title: summarizeTitle,
+            action: #selector(startSummarizing),
+            keyEquivalent: ""
+        )
+        summarizeItem.target = self
+        summarizeItem.isEnabled = !queueIsActive && queue.pending_summarize > 0
+        menu.addItem(summarizeItem)
+
         // Transcription
         let active = jobs()
         let running = active.filter { !$0.failed }
@@ -250,11 +280,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !broken.isEmpty {
             let retry = NSMenuItem(title: "  Retry failed (\(broken.count))", action: #selector(retryFailed), keyEquivalent: "")
             retry.target = self
+            retry.isEnabled = !queueIsActive
             menu.addItem(retry)
         }
 
         // Summaries
-        let waiting = awaitingSummaryCount()
+        let waiting = queue.pending_summarize
         menu.addItem(.separator())
         menu.addItem(header("Summaries"))
         menu.addItem(disabled(waiting == 0
@@ -269,7 +300,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             ("Open Transcripts Folder", #selector(openTranscripts)),
             ("Open Summaries Folder", #selector(openSummaries)),
             ("Open Action Items", #selector(openActionItems)),
-            ("Open Log", #selector(openLog))
+            ("Open Log", #selector(openLog)),
+            ("Open Queue Log", #selector(openQueueLog))
         ] {
             let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
             item.target = self
@@ -339,23 +371,93 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSWorkspace.shared.open(logFile)
     }
 
-    /// Failed jobs keep their WAV, so a retry is just running the script again.
+    @objc private func openQueueLog() {
+        try? FileManager.default.createDirectory(
+            at: queueLogFile.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        if !FileManager.default.fileExists(atPath: queueLogFile.path) {
+            try? "".write(to: queueLogFile, atomically: true, encoding: .utf8)
+        }
+        NSWorkspace.shared.open(queueLogFile)
+    }
+
+    /// Refresh counts away from the main thread. Menu construction only reads this snapshot.
+    private func refreshQueueCache() {
+        guard !queueRefreshInFlight else {
+            queueRefreshRequested = true
+            return
+        }
+        queueRefreshInFlight = true
+        let root = home
+        let manager = queueManagerScript
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/bash")
+            process.arguments = [manager.path, "count"]
+            process.currentDirectoryURL = root
+            process.environment = ProcessInfo.processInfo.environment.merging(
+                ["RECORDBOT_HOME": root.path]
+            ) { _, new in new }
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            do {
+                try process.run()
+                process.waitUntilExit()
+            } catch {
+                NSLog("RecordBot: queue count refresh failed: \(error.localizedDescription)")
+            }
+            let data = try? Data(contentsOf: root.appendingPathComponent(".state/status.json"))
+            let status = data.flatMap { try? JSONDecoder().decode(QueueStatus.self, from: $0) }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if let status { self.cachedQueue = status }
+                self.queueRefreshInFlight = false
+                if self.queueRefreshRequested {
+                    self.queueRefreshRequested = false
+                    self.refreshQueueCache()
+                }
+            }
+        }
+    }
+
+    @objc private func startTranscribing() { launchQueue(action: "transcribe") }
+    @objc private func startSummarizing() { launchQueue(action: "summarize") }
+
+    private func launchQueue(action: String, recordingBase: String? = nil) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        var arguments = [processQueueScript.path, action]
+        if let recordingBase { arguments.append(recordingBase) }
+        process.arguments = arguments
+        process.currentDirectoryURL = home
+        process.environment = ProcessInfo.processInfo.environment.merging(
+            ["RECORDBOT_HOME": home.path]
+        ) { _, new in new }
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        do { try process.run() } catch {
+            report(title: "Queue failed to start", body: error.localizedDescription)
+        }
+        refreshQueueCache()
+    }
+
+    /// Failed jobs keep their WAV; retry them through the sequential queue.
     @objc private func retryFailed() {
         let failures = jobs().filter(\.failed)
-        var retried = 0
-
+        var retriable = 0
         for job in failures {
             let wav = recordingsDir.appendingPathComponent("\(job.name).wav")
             guard FileManager.default.fileExists(atPath: wav.path) else { continue }
             try? FileManager.default.removeItem(at: statusDir.appendingPathComponent("\(job.name).failed"))
-            launchTranscription(for: wav)
-            retried += 1
+            retriable += 1
         }
 
         report(
-            title: retried > 0 ? "Retrying \(retried)" : "Nothing to retry",
-            body: retried > 0 ? "Transcription restarted." : "The audio for those jobs is gone."
+            title: retriable > 0 ? "Retrying \(retriable)" : "Nothing to retry",
+            body: retriable > 0 ? "Added to the sequential transcription queue." : "The audio for those jobs is gone."
         )
+        if retriable > 0 { launchQueue(action: "transcribe") }
         refreshTitle()
     }
 
@@ -421,12 +523,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 resetIdleState()
 
                 if let url {
-                    let shouldProceed = askForContext(about: url)
-                    if shouldProceed {
-                        report(title: "Recording saved", body: "Transcribing in the background.")
-                        launchTranscription(for: url)
-                    } else {
+                    let choice = askForContext(about: url)
+                    if choice == .discard {
                         report(title: "Recording discarded", body: "Audio was removed.")
+                    } else {
+                        refreshQueueCache()
+                        if choice == .saveAndTranscribe {
+                            launchQueue(action: "transcribe-one", recordingBase: url.deletingPathExtension().lastPathComponent)
+                            report(title: "Recording saved", body: "Transcription started.")
+                        } else if choice == .save {
+                            report(title: "Recording saved", body: "Queued. Use Transcribe Pending when you’re ready.")
+                        } else {
+                            report(title: "Recording saved", body: "Queued without meeting notes.")
+                        }
                     }
                 } else {
                     report(title: "Nothing captured", body: "No audio was playing, so no file was kept.")
@@ -453,13 +562,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Asks what the meeting was, right after stopping, while it's still fresh.
     /// The answers go in a sidecar .meta file that the transcript inherits, so the LLM
     /// summarizes with some idea of who was talking and why.
-    /// Returns true if transcription should proceed, or false if discarded.
-    private func askForContext(about wav: URL) -> Bool {
+    /// Collects optional meeting context and returns the chosen save/transcribe action.
+    private func askForContext(about wav: URL) -> SaveChoice {
         let alert = NSAlert()
         alert.messageText = "What was this meeting?"
         alert.informativeText = "All of this is optional. Anything you fill in gets handed "
             + "to the LLM along with the transcript."
         alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Save and Transcribe")
         alert.addButton(withTitle: "Skip")
         alert.addButton(withTitle: "Discard")
         alert.window.level = .floating
@@ -512,16 +622,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let modalResponse = alert.runModal()
         let base = wav.deletingPathExtension()
 
-        if modalResponse == .alertThirdButtonReturn {
+        if modalResponse.rawValue == 1003 {
             // Discard clicked: remove audio and sidecars
             try? FileManager.default.removeItem(at: wav)
             try? FileManager.default.removeItem(at: base.appendingPathExtension("mic.wav"))
             try? FileManager.default.removeItem(at: base.appendingPathExtension("sync"))
-            return false
+            return .discard
         }
 
-        let clickedSave = modalResponse == .alertFirstButtonReturn
-        guard clickedSave else { return true }
+        let choice: SaveChoice
+        switch modalResponse {
+        case .alertFirstButtonReturn: choice = .save
+        case .alertSecondButtonReturn: choice = .saveAndTranscribe
+        case .alertThirdButtonReturn: return .skip
+        default: return .skip
+        }
 
         func clean(_ field: NSTextField) -> String {
             field.stringValue
@@ -550,25 +665,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 .write(to: base.appendingPathExtension("notes"), atomically: true, encoding: .utf8)
         }
 
-        return true
-    }
-
-    /// Fires the transcription script and forgets about it. The script publishes its own
-    /// progress into Status/ and recordbot.log.
-    private func launchTranscription(for wav: URL) {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [transcribeScript.path, wav.path]
-        process.currentDirectoryURL = home
-        process.environment = ProcessInfo.processInfo.environment.merging(
-            ["RECORDBOT_HOME": home.path]
-        ) { _, new in new }
-
-        do {
-            try process.run()
-        } catch {
-            report(title: "Transcription failed to start", body: error.localizedDescription)
-        }
+        return choice
     }
 
     /// UNUserNotificationCenter needs a notarized bundle with entitlements, so status

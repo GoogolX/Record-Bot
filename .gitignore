@@ -1,7 +1,68 @@
-Recordings/*
-*.wav
-*.log
-vendor/*
+# macOS
 .DS_Store
+
+# Build outputs and bundled app artifacts
+.build/
+*.build
+*.app/
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local recordings and generated meeting data (often contains private content)
+/Recordings/
+*.wav
+*.mp3
+/Transcripts/
+/Summaries/
+/Transcripts_Backup/
+
+# Local experiment/data stores
+/Summarization_Experiments/
+/notebook_data/
+/surreal_data/
+/.chat_index.pkl
+/api.json
+/docker-compose.yml
+
+# Runtime state, logs, credentials, and archives
+**/.state/
+*.log
+*.zip
 .hf_token
 .gemini_token
+
+# Local one-off planner/transcription experiments; maintained project code lives
+# under evals/ and scripts/.
+/e2e_test.py
+/eval_month.py
+/eval_planner*.py
+/eval_smart_planner*.py
+/eval_test.py
+/test_bleed.py
+/test_dates.py
+/test_final.py
+/test_rms2.py
+/test_bad*.txt
+/test_good*.txt
+/out.txt
+/run_missing.sh
+/evals/benchmark_*.txt
+/evals/logs/
+/evals/generate_mock_reports*.sh
+
+# Temporary artifacts from the manual queue sandbox
+/Sandbox_ManualQueue/.build/
+/Sandbox_ManualQueue/App_Modified.swift
+/Sandbox_ManualQueue/Swift_Patch.swift
+/Sandbox_ManualQueue/apply_patch.py
+/Sandbox_ManualQueue/Recordings/
+/Sandbox_ManualQueue/Transcripts/
+/Sandbox_ManualQueue/Summaries/
+/Sandbox_ManualQueue/.state/
+
+# Vendored dependencies are built separately
+vendor/*
