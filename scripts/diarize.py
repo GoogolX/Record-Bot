@@ -90,6 +90,8 @@ def main():
     parser.add_argument("--min-speakers", type=int, default=0)
     parser.add_argument("--max-speakers", type=int, default=0)
     parser.add_argument("--model", default="", help="override the pipeline to load")
+    parser.add_argument("--device", choices=("auto", "cpu", "mps"), default="auto",
+                        help="inference device; auto prefers MPS when available")
     parser.add_argument("--token", default="")
     parser.add_argument("--selftest", action="store_true",
                         help="load the pipeline and exit, used by setup")
@@ -129,13 +131,21 @@ def main():
     # MPS gives a solid speedup but has had gaps in op coverage, so fall back to
     # CPU rather than dying halfway through a meeting.
     device = "cpu"
-    if torch.backends.mps.is_available():
+    if args.device == "mps":
+        if not torch.backends.mps.is_available():
+            log("MPS was requested but is unavailable")
+            return 6
+        pipeline.to(torch.device("mps"))
+        device = "mps"
+    elif args.device == "auto" and torch.backends.mps.is_available():
         try:
             pipeline.to(torch.device("mps"))
             device = "mps"
         except Exception as exc:
             log(f"mps unavailable ({exc}), using cpu")
             pipeline.to(torch.device("cpu"))
+    else:
+        pipeline.to(torch.device("cpu"))
     log(f"running on {device}")
 
     hints = {}
