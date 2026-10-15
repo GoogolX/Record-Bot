@@ -18,9 +18,25 @@ log() {
 set_state() { "$Q_MGR" set_status "$1" "${2:-}" "${3:-}"; }
 
 process_transcriptions() {
+    local requested_base="${1:-}"
     local -a pending=()
     local base total count=0
-    while IFS= read -r base; do [[ -n "$base" ]] && pending+=("$base"); done < <("$Q_MGR" list_transcribe)
+    if [[ -n "$requested_base" ]]; then
+        # Accept only a single recording basename; never let an argument escape Recordings/.
+        if [[ "$requested_base" == */* || "$requested_base" == *$'\n'* || "$requested_base" == *.mic ]]; then
+            log "Rejected invalid targeted transcription name: $requested_base"
+            return 2
+        fi
+        while IFS= read -r base; do
+            [[ "$base" == "$requested_base" ]] && pending+=("$base")
+        done < <("$Q_MGR" list_transcribe)
+        if ((${#pending[@]} == 0)); then
+            log "Targeted transcription skipped: $requested_base is missing or already transcribed."
+            return 2
+        fi
+    else
+        while IFS= read -r base; do [[ -n "$base" ]] && pending+=("$base"); done < <("$Q_MGR" list_transcribe)
+    fi
     total=${#pending[@]}
     for base in "${pending[@]}"; do
         count=$((count + 1))
@@ -56,7 +72,12 @@ process_summaries() {
 }
 
 action="${1:-}"
-case "$action" in transcribe|summarize|all) ;; *) echo "Usage: $0 {transcribe|summarize|all}" >&2; exit 2 ;; esac
+requested_base="${2:-}"
+case "$action" in
+    transcribe|summarize|all) ;;
+    transcribe-one) [[ -n "$requested_base" ]] || { echo "Usage: $0 transcribe-one <recording-basename>" >&2; exit 2; } ;;
+    *) echo "Usage: $0 {transcribe|summarize|all|transcribe-one <recording-basename>}" >&2; exit 2 ;;
+esac
 
 # mkdir is atomic, preventing simultaneous button clicks from starting two batches.
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
@@ -89,6 +110,7 @@ trap 'exit 143' TERM
 log "Queue processor started ($action)."
 case "$action" in
     transcribe) process_transcriptions ;;
+    transcribe-one) process_transcriptions "$requested_base" ;;
     summarize) process_summaries ;;
     all) process_transcriptions; process_summaries ;;
 esac
