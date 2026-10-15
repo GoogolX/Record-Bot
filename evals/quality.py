@@ -9,6 +9,11 @@ from parse import load_summary, load_transcript, unnamed_owner
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def unresolved_speaker(value: str) -> bool:
+    """Whether a speaker map value is still a placeholder rather than a name."""
+    return value.strip().casefold() in {"", "?", "unresolved", "unknown", "n/a"}
+
+
 def audit() -> dict:
     transcripts = [load_transcript(p) for p in sorted((ROOT / "Transcripts").glob("*.md"))]
     summaries = [load_summary(p) for p in sorted((ROOT / "Summaries").glob("*.md"))]
@@ -19,7 +24,7 @@ def audit() -> dict:
     speaker_issues = []
     for doc in transcripts:
         for label, resolved in doc["speakers"].items():
-            if resolved.strip().lower() == "unresolved" or not resolved.strip():
+            if unresolved_speaker(resolved):
                 unresolved += 1
                 speaker_issues.append(f"{doc['id']}: {label} unresolved")
             else:

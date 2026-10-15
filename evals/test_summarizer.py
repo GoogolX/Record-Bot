@@ -14,6 +14,7 @@ import datetime
 import json
 import os
 import sys
+import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -23,7 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "evals"))
 
 import summarize  # noqa: E402
-from parse import canonical_name, load_summary, load_transcript  # noqa: E402
+from parse import canonical_name, load_summary, load_transcript, parse_speakers, split_frontmatter  # noqa: E402
 
 LOGS_DIR = ROOT / "evals" / "logs"
 
@@ -63,6 +64,36 @@ Overview text.
         self.assertIn("SUMMARIZER_BACKEND", config)
         self.assertIn("LOCAL_LLM_MODEL", config)
         self.assertIn("OLLAMA_HOST", config)
+
+    def test_update_transcript_header_persists_resolved_speakers(self):
+        content = '''---
+title: "Review"
+speakers:
+  - "Speaker 1": "?"  # 4 min of speech
+  - "Speaker 2": "Kaushik"
+status: awaiting-summary
+---
+
+## Transcript
+Hello.
+'''
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "meeting.md"
+            path.write_text(content, encoding="utf-8")
+            summarize.update_transcript_header(
+                path,
+                {"Speaker 1": "Rajeshwari (high)"},
+                {"Speaker 1": "Addressed by name"},
+            )
+            header, body = split_frontmatter(path.read_text(encoding="utf-8"))
+
+        self.assertEqual(parse_speakers(header), {
+            "Speaker 1": "Rajeshwari (high)",
+            "Speaker 2": "Kaushik",
+        })
+        self.assertIn("status: summarized", header)
+        self.assertIn('"Speaker 1": "Addressed by name"', header)
+        self.assertIn("Hello.", body)
 
 
 def run_llm_benchmark(
