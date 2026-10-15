@@ -19,7 +19,7 @@ WHISPER_THREADS="2"
 
 # Vocabulary / initial prompt for whisper. Biases recognition toward technical
 # terms, acronyms, and proper names rather than phonetic misinterpretations.
-WHISPER_PROMPT="AWS, EDW, CDC, QTest, PO, IRGR, Power BI, ETL, DMOD, DBT, SF"
+WHISPER_PROMPT="AWS, EDW, CDC, QTest, PO, IRGR, Power BI, ETL, DMOD, DBT, SF. Hello, welcome to the meeting. Let us get started."
 
 # ---- Speakers --------------------------------------------------------------
 
