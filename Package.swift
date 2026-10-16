@@ -8,6 +8,11 @@ let package = Package(
         .executableTarget(
             name: "RecordBot",
             path: "Sources/RecordBot"
+        ),
+        .testTarget(
+            name: "RecordBotTests",
+            dependencies: ["RecordBot"],
+            path: "Tests/RecordBotTests"
         )
     ]
 )

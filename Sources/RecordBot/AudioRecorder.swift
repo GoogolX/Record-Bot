@@ -14,6 +14,7 @@ final class AudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     enum RecorderError: LocalizedError {
         case noDisplay
         case alreadyRecording
+        case interrupted
 
         var errorDescription: String? {
             switch self {
@@ -21,6 +22,8 @@ final class AudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
                 return "No display available to attach the audio stream to."
             case .alreadyRecording:
                 return "A recording is already running."
+            case .interrupted:
+                return "The audio stream was interrupted while starting."
             }
         }
     }
@@ -33,14 +36,13 @@ final class AudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private let lock = NSLock()
     private let mic = MicRecorder()
 
-    // All of these are guarded by `lock`, including the reads inside the sample callback.
+    // Lifecycle fields are guarded by `lock`; output is confined to writeQueue.
     private var stream: SCStream?
-    private var audioFile: AVAudioFile?
-    private var converter: AVAudioConverter?
-    private var currentURL: URL?
+    private let output = RecordingOutput(log: RecordBotLog.write)
+    private var captureURL: URL?
     private var recording = false
     private var starting = false
-    private var systemFirstBufferAt: Double?
+    private var stopping = false
 
     var isRecording: Bool {
         lock.lock(); defer { lock.unlock() }
@@ -50,19 +52,8 @@ final class AudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     /// Starts capture, writing to a timestamped WAV inside `directory`. Returns the destination.
     @discardableResult
     func start(in directory: URL) async throws -> URL {
-        lock.lock()
-        guard !recording, !starting else {
-            lock.unlock()
-            throw RecorderError.alreadyRecording
-        }
-        starting = true
-        lock.unlock()
-        
-        defer {
-            lock.lock()
-            starting = false
-            lock.unlock()
-        }
+        try reserveStart()
+        defer { finishStarting() }
 
         let content = try await SCShareableContent.excludingDesktopWindows(
             false,
@@ -84,98 +75,99 @@ final class AudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         config.queueDepth = 6
 
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appendingPathComponent("\(Self.timestamp()).wav")
+        let url = RecordingFiles.destination(in: directory)
 
         let newStream = SCStream(filter: filter, configuration: config, delegate: self)
         try newStream.addStreamOutput(self, type: .screen, sampleHandlerQueue: videoSinkQueue)
         try newStream.addStreamOutput(self, type: .audio, sampleHandlerQueue: writeQueue)
-        try await newStream.startCapture()
+        // ScreenCaptureKit can deliver audio before startCapture() returns.
+        // Install the new destination first, and accept only this stream's buffers.
+        prepareCapture(stream: newStream, url: url)
+        RecordBotLog.write("Capture starting: \(url.lastPathComponent)")
+        do {
+            try await newStream.startCapture()
+        } catch {
+            if let capture = takeStreamForStop(matching: newStream) {
+                _ = finishCapture(capture, micResult: mic.stop())
+            }
+            throw error
+        }
+        guard activateCapture(newStream) else { throw RecorderError.interrupted }
+        RecordBotLog.write("Capture started: \(url.lastPathComponent)")
+        return url
+    }
 
-        // Only claim the URL once capture is actually live, so a failed start leaves no trace.
-        commitStart(stream: newStream, url: url)
+    private func reserveStart() throws {
+        lock.lock(); defer { lock.unlock() }
+        guard !recording, !starting, !stopping else { throw RecorderError.alreadyRecording }
+        starting = true
+    }
 
-        // Your own mic, on its own track. Best effort: a denied permission or a
-        // machine with no input device should not stop the meeting being recorded.
+    private func finishStarting() {
+        lock.lock(); defer { lock.unlock() }
+        starting = false
+    }
+
+    private func prepareCapture(stream newStream: SCStream, url: URL) {
+        writeQueue.sync { output.begin(session: ObjectIdentifier(newStream), url: url) }
+        lock.lock(); defer { lock.unlock() }
+        stream = newStream
+        captureURL = url
+    }
+
+    private func activateCapture(_ newStream: SCStream) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard stream === newStream, let url = captureURL, !stopping else { return false }
+        // Serialize mic start with interruption handling, so an interrupted stream
+        // cannot stop the mic just before a late start installs a fresh tap.
         do {
             try mic.start(writingTo: url.deletingPathExtension().appendingPathExtension("mic.wav"))
         } catch {
-            NSLog("RecordBot: microphone unavailable, recording system audio only: \(error.localizedDescription)")
+            RecordBotLog.write("Microphone unavailable for \(url.lastPathComponent): \(error.localizedDescription)")
         }
-
-        return url
-    }
-
-    /// Locking helpers are deliberately synchronous: NSLock must not be held across a suspension.
-    private func commitStart(stream newStream: SCStream, url: URL) {
-        lock.lock()
-        stream = newStream
-        currentURL = url
         recording = true
-        systemFirstBufferAt = nil
-        lock.unlock()
+        return true
     }
 
-    private func takeStreamForStop() -> SCStream? {
-        lock.lock()
-        let live = stream
+    private typealias Capture = (stream: SCStream, url: URL)
+
+    private func takeStreamForStop(matching expected: SCStream? = nil) -> Capture? {
+        lock.lock(); defer { lock.unlock() }
+        guard let live = stream, let url = captureURL,
+              expected == nil || live === expected else { return nil }
         stream = nil
+        captureURL = nil
         recording = false
-        lock.unlock()
-        return live
+        stopping = true
+        return (live, url)
     }
 
-    /// Stops capture and returns the finished WAV, or nil if nothing usable was captured.
+    private func finishStopping() {
+        lock.lock(); defer { lock.unlock() }
+        stopping = false
+    }
+
+    /// Drain queued samples and finalize both files before allowing another start.
     @discardableResult
     func stop() async -> URL? {
-        // Mic first, unconditionally: if the system stream already died on its own,
-        // the guard below returns early and the tap would be left installed, which
-        // makes the next recording's installTap raise an uncatchable exception.
+        guard let capture = takeStreamForStop() else { return nil }
         let micResult = mic.stop()
-
-        guard let live = takeStreamForStop() else {
-            if let micResult { try? FileManager.default.removeItem(at: micResult.url) }
-            return nil
-        }
-        try? await live.stopCapture()
-
-        // Close the file on the queue that writes to it, so the last buffer lands first.
-        let closed: (url: URL?, startedAt: Double?) = writeQueue.sync {
-            self.lock.lock()
-            let finished = self.currentURL
-            let started = self.systemFirstBufferAt
-            self.audioFile = nil
-            self.converter = nil
-            self.currentURL = nil
-            self.systemFirstBufferAt = nil
-            self.lock.unlock()
-            return (finished, started)
-        }
-
-        guard let url = closed.url,
-              let size = try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int,
-              size > 1024 else {
-            if let url = closed.url { try? FileManager.default.removeItem(at: url) }
-            if let mic = micResult { try? FileManager.default.removeItem(at: mic.url) }
-            return nil
-        }
-
-        writeSyncFile(for: url, systemStart: closed.startedAt, mic: micResult)
-        return url
+        do { try await capture.stream.stopCapture() }
+        catch { RecordBotLog.write("Stop capture failed: \(error.localizedDescription)") }
+        return finishCapture(capture, micResult: micResult)
     }
 
-    /// Both tracks are captured by this process, so alignment is bookkeeping rather than
-    /// a matching problem: record how far apart their first samples landed and the
-    /// transcription step can line them up.
-    private func writeSyncFile(for systemURL: URL, systemStart: Double?, mic: (url: URL, firstBufferAt: Double)?) {
-        guard let mic, let systemStart else { return }
+    private func finishCapture(_ capture: Capture, micResult: (url: URL, firstBufferAt: Double)?) -> URL? {
+        let closed = writeQueue.sync { output.finish(session: ObjectIdentifier(capture.stream)) }
+        let saved = finalizeFiles(expectedURL: capture.url, closed: closed, micResult: micResult)
+        finishStopping()
+        return saved
+    }
 
-        let offset = mic.firstBufferAt - systemStart
-        let body = """
-        mic_file: \(mic.url.lastPathComponent)
-        mic_offset_seconds: \(String(format: "%.3f", offset))
-        """
-        let sync = systemURL.deletingPathExtension().appendingPathExtension("sync")
-        try? (body + "\n").write(to: sync, atomically: true, encoding: .utf8)
+    private func finalizeFiles(expectedURL: URL, closed: (url: URL?, startedAt: Double?),
+                               micResult: (url: URL, firstBufferAt: Double)?) -> URL? {
+        RecordingFiles.finalize(expectedURL: expectedURL, system: closed, microphone: micResult,
+                                log: RecordBotLog.write)
     }
 
     // MARK: - SCStreamOutput
@@ -196,103 +188,32 @@ final class AudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
                       )
                 else { return }
 
-                lock.lock()
-                if systemFirstBufferAt == nil { systemFirstBufferAt = CACurrentMediaTime() }
-                if audioFile == nil, let url = currentURL {
-                    do {
-                        audioFile = try AVAudioFile(
-                            forWriting: url,
-                            settings: [
-                                AVFormatIDKey: kAudioFormatLinearPCM,
-                                AVSampleRateKey: asbd.mSampleRate,
-                                AVNumberOfChannelsKey: Int(asbd.mChannelsPerFrame),
-                                AVLinearPCMBitDepthKey: 16,
-                                AVLinearPCMIsFloatKey: false,
-                                AVLinearPCMIsBigEndianKey: false,
-                                AVLinearPCMIsNonInterleaved: false
-                            ]
-                        )
-                    } catch {
-                        NSLog("RecordBot: could not open \(url.lastPathComponent): \(error.localizedDescription)")
-                    }
-                }
-                let file = audioFile
-                lock.unlock()
-
-                // Adapt to format changes (e.g. headphone disconnects, sample rate switches)
-                // rather than silently dropping audio for the remainder of the call.
-                guard let file else { return }
-                if pcm.format == file.processingFormat {
-                    try file.write(from: pcm)
-                } else {
-                    lock.lock()
-                    if converter == nil || converter?.inputFormat != pcm.format || converter?.outputFormat != file.processingFormat {
-                        converter = AVAudioConverter(from: pcm.format, to: file.processingFormat)
-                        NSLog("RecordBot: format changed to \(pcm.format), converting to \(file.processingFormat)")
-                    }
-                    let conv = converter
-                    lock.unlock()
-
-                    if let conv {
-                        let ratio = file.processingFormat.sampleRate / pcm.format.sampleRate
-                        let outputCapacity = AVAudioFrameCount(Double(pcm.frameLength) * ratio + 512)
-                        if let convertedBuffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: outputCapacity) {
-                            var error: NSError?
-                            var consumed = false
-                            let status = conv.convert(to: convertedBuffer, error: &error) { _, outStatus in
-                                if !consumed {
-                                    consumed = true
-                                    outStatus.pointee = .haveData
-                                    return pcm
-                                } else {
-                                    outStatus.pointee = .noDataNow
-                                    return nil
-                                }
-                            }
-                            if status != .error, error == nil, convertedBuffer.frameLength > 0 {
-                                try file.write(from: convertedBuffer)
-                            }
-                        }
-                    }
-                }
+                try output.write(pcm, session: ObjectIdentifier(stream), at: CACurrentMediaTime())
             }
+        } catch RecordingOutput.OutputError.staleSession {
+            // Late buffers from a stopped stream are expected and must be ignored.
         } catch {
-            NSLog("RecordBot: audio write failed: \(error.localizedDescription)")
+            RecordBotLog.write("Audio write failed: \(error.localizedDescription)")
         }
     }
 
     // MARK: - SCStreamDelegate
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {
-        NSLog("RecordBot: stream stopped: \(error.localizedDescription)")
-
-        lock.lock()
-        let wasRecording = recording
-        recording = false
-        self.stream = nil
-        lock.unlock()
-
-        // Leave no tap behind, or the next recording crashes on installTap.
-        _ = mic.stop()
-
+        // A delayed error from an older stream must not end a newer recording.
+        guard let capture = takeStreamForStop(matching: stream) else { return }
+        RecordBotLog.write("Capture interrupted: \(capture.url.lastPathComponent): \(error.localizedDescription)")
+        let micResult = mic.stop()
         writeQueue.async {
-            self.lock.lock()
-            self.audioFile = nil
-            self.converter = nil
-            self.lock.unlock()
-        }
-
-        if wasRecording {
-            let name = Self.streamDied
+            let closed = self.output.finish(session: ObjectIdentifier(capture.stream))
+            let saved = self.finalizeFiles(expectedURL: capture.url, closed: closed, micResult: micResult)
+            self.finishStopping()
             DispatchQueue.main.async {
-                NotificationCenter.default.post(name: name, object: nil)
+                var info: [String: Any] = ["reason": error.localizedDescription]
+                if let saved { info["recordingURL"] = saved }
+                NotificationCenter.default.post(name: Self.streamDied, object: self, userInfo: info)
             }
         }
     }
 
-    static func timestamp() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
-        return formatter.string(from: Date())
-    }
 }
