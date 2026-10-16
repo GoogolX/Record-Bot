@@ -81,7 +81,7 @@ final class MicRecorder {
                     self.lock.lock()
                     self.warnedAboutFormat = true
                     self.lock.unlock()
-                    NSLog("RecordBot: mic format \(buffer.format) does not match file \(sink.processingFormat), mic track disabled")
+                    RecordBotLog.write("mic format \(buffer.format) does not match file \(sink.processingFormat), mic track disabled")
                 }
                 return
             }
@@ -89,7 +89,7 @@ final class MicRecorder {
             do {
                 try sink.write(from: buffer)
             } catch {
-                NSLog("RecordBot: mic write failed: \(error.localizedDescription)")
+                RecordBotLog.write("mic write failed: \(error.localizedDescription)")
             }
         }
 
@@ -100,7 +100,7 @@ final class MicRecorder {
             object: engine,
             queue: nil
         ) { [weak self] _ in
-            NSLog("RecordBot: audio device changed, mic track ends here")
+            RecordBotLog.write("audio device changed, mic track ends here")
             self?.teardownEngine()
         }
         lock.lock()
@@ -109,6 +109,7 @@ final class MicRecorder {
 
         engine.prepare()
         try engine.start()
+        RecordBotLog.write("Microphone capture started: \(url.lastPathComponent)")
     }
 
     /// Stops capture. Returns the file and the moment its first sample landed,
@@ -132,6 +133,7 @@ final class MicRecorder {
             try? FileManager.default.removeItem(at: url)
             return nil
         }
+        RecordBotLog.write("Microphone saved: \(url.lastPathComponent), \(size) bytes")
         return (url, started)
     }
 

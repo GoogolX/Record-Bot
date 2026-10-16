@@ -50,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     )
     private var queueRefreshInFlight = false
     private var queueRefreshRequested = false
+    private var recordingTransitionInFlight = false
 
     /// Root of the Record-Bot folder. The .app lives inside it; override with RECORDBOT_HOME.
     private lazy var home: URL = {
@@ -69,6 +70,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var queueLogFile: URL { home.appendingPathComponent(".state/queue.log") }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        RecordBotLog.configure(logFile)
+        RecordBotLog.write("App launched")
         NSApp.setActivationPolicy(.accessory)
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -90,7 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(streamDied),
+            selector: #selector(streamDied(_:)),
             name: AudioRecorder.streamDied,
             object: nil
         )
@@ -117,7 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
            AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined {
             AVCaptureDevice.requestAccess(for: .audio) { granted in
                 if !granted {
-                    NSLog("RecordBot: microphone access denied, own-voice track disabled")
+                    RecordBotLog.write("Microphone access denied, own-voice track disabled")
                 }
             }
         }
@@ -509,34 +512,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// The capture stream fell over without being asked to stop.
-    @objc private func streamDied() {
-        resetIdleState()
-        report(title: "Recording interrupted", body: "The audio stream stopped. See the log.")
+    @objc private func streamDied(_ notification: Notification) {
+        if !recorder.isRecording { resetIdleState() }
+        let reason = notification.userInfo?["reason"] as? String ?? "The audio stream stopped."
+        if let url = notification.userInfo?["recordingURL"] as? URL {
+            report(title: "Recording interrupted", body: "Captured audio was saved. \(reason)")
+            handleSavedRecording(url, interruptionReason: reason)
+        } else {
+            report(title: "Recording interrupted", body: "No usable audio was captured. \(reason)")
+        }
+        refreshQueueCache()
     }
 
     // MARK: - Recording
 
     private func toggle() {
+        guard !recordingTransitionInFlight else { return }
+        recordingTransitionInFlight = true
         Task { @MainActor in
+            defer { recordingTransitionInFlight = false }
             if recorder.isRecording {
                 let url = await recorder.stop()
                 resetIdleState()
 
                 if let url {
-                    let choice = askForContext(about: url)
-                    if choice == .discard {
-                        report(title: "Recording discarded", body: "Audio was removed.")
-                    } else {
-                        refreshQueueCache()
-                        if choice == .saveAndTranscribe {
-                            launchQueue(action: "transcribe-one", recordingBase: url.deletingPathExtension().lastPathComponent)
-                            report(title: "Recording saved", body: "Transcription started.")
-                        } else if choice == .save {
-                            report(title: "Recording saved", body: "Queued. Use Transcribe Pending when you’re ready.")
-                        } else {
-                            report(title: "Recording saved", body: "Queued without meeting notes.")
-                        }
-                    }
+                    handleSavedRecording(url)
                 } else {
                     report(title: "Nothing captured", body: "No audio was playing, so no file was kept.")
                 }
@@ -554,6 +554,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    private func handleSavedRecording(_ url: URL, interruptionReason: String? = nil) {
+        let choice = askForContext(about: url, interruptionReason: interruptionReason)
+        RecordBotLog.write("Save choice for \(url.lastPathComponent): \(choice)")
+        if choice == .discard {
+            report(title: "Recording discarded", body: "Audio was removed.")
+        } else {
+            refreshQueueCache()
+            if choice == .saveAndTranscribe {
+                launchQueue(action: "transcribe-one", recordingBase: url.deletingPathExtension().lastPathComponent)
+                report(title: "Recording saved", body: "Transcription started.")
+            } else if choice == .save {
+                report(title: "Recording saved", body: "Queued. Use Transcribe Pending when you’re ready.")
+            } else {
+                report(title: "Recording saved", body: "Queued without meeting notes.")
+            }
+        }
+    }
+
     private func resetIdleState() {
         startedAt = nil
         refreshTitle()
@@ -563,11 +581,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// The answers go in a sidecar .meta file that the transcript inherits, so the LLM
     /// summarizes with some idea of who was talking and why.
     /// Collects optional meeting context and returns the chosen save/transcribe action.
-    private func askForContext(about wav: URL) -> SaveChoice {
+    private func askForContext(about wav: URL, interruptionReason: String? = nil) -> SaveChoice {
         let alert = NSAlert()
         alert.messageText = "What was this meeting?"
         alert.informativeText = "All of this is optional. Anything you fill in gets handed "
             + "to the LLM along with the transcript."
+        if let interruptionReason {
+            alert.informativeText = "Recording was interrupted. Captured audio has been saved. \(interruptionReason)\n\n" + alert.informativeText
+        }
         alert.addButton(withTitle: "Save")
         alert.addButton(withTitle: "Save and Transcribe")
         alert.addButton(withTitle: "Skip")
@@ -619,7 +640,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         NSApp.activate(ignoringOtherApps: true)
         alert.window.initialFirstResponder = titleField
+        RecordBotLog.write("Metadata prompt opened: \(wav.lastPathComponent)")
         let modalResponse = alert.runModal()
+        RecordBotLog.write("Metadata prompt response: \(modalResponse.rawValue) for \(wav.lastPathComponent)")
         let base = wav.deletingPathExtension()
 
         if modalResponse.rawValue == 1003 {
@@ -653,16 +676,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !context.isEmpty { lines.append("context: \(context)") }
         if !watch.isEmpty { lines.append("watch_for: \(watch)") }
         if !lines.isEmpty {
-            try? (lines.joined(separator: "\n") + "\n")
-                .write(to: base.appendingPathExtension("meta"), atomically: true, encoding: .utf8)
+            do {
+                try (lines.joined(separator: "\n") + "\n")
+                    .write(to: base.appendingPathExtension("meta"), atomically: true, encoding: .utf8)
+                RecordBotLog.write("Metadata saved: \(base.lastPathComponent)")
+            } catch {
+                report(title: "Metadata save failed", body: error.localizedDescription)
+            }
         }
 
         // Notes are free-form and multi-line, so they travel in their own file
         // and land in the transcript as a section rather than a header field.
         let notes = notesView.string.trimmingCharacters(in: .whitespacesAndNewlines)
         if !notes.isEmpty {
-            try? (notes + "\n")
-                .write(to: base.appendingPathExtension("notes"), atomically: true, encoding: .utf8)
+            do {
+                try (notes + "\n")
+                    .write(to: base.appendingPathExtension("notes"), atomically: true, encoding: .utf8)
+                RecordBotLog.write("Meeting notes saved: \(base.lastPathComponent)")
+            } catch {
+                report(title: "Meeting notes save failed", body: error.localizedDescription)
+            }
         }
 
         return choice
@@ -671,7 +704,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// UNUserNotificationCenter needs a notarized bundle with entitlements, so status
     /// updates go to the tooltip and the log instead of Notification Center.
     private func report(title: String, body: String) {
-        NSLog("RecordBot: \(title) — \(body)")
+        RecordBotLog.write("\(title) — \(body)")
         statusItem?.button?.toolTip = "\(title): \(body)"
     }
 }

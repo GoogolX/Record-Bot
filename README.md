@@ -44,9 +44,15 @@ When you stop, a panel appears with four optional fields:
 
 Hit Skip and it files as "Untitled meeting". Hit Discard and the recording is
 immediately removed. Otherwise it stays queued until you choose **Transcribe Pending**
-from the menu. Recordings are processed sequentially and silently in the background.
+from the menu. **Save and Transcribe** starts transcription immediately for the recording
+you just saved. Recordings are processed sequentially and silently in the background.
 When transcription finishes, the menu shows the number of transcripts waiting for
 summarization; choose **Summarize Pending** when you are ready to run those jobs.
+
+If macOS interrupts capture, the audio recorded so far is saved and the metadata
+panel still appears. Capture starts, interruptions, microphone failures, and metadata
+saves are recorded in `recordbot.log`. A usable microphone recording is retained
+even if the system track is empty.
 
 ## Speakers
 
@@ -220,3 +226,16 @@ almost every case.
 ```bash
 bash scripts/build-app.sh
 ```
+
+## Capture regression tests
+
+With Swift 6 or later:
+
+```bash
+bash scripts/test-swift.sh
+```
+
+The tests use generated audio buffers and temporary files; they do not record the
+physical microphone. They cover interrupted recordings, late buffers, separate
+output files, microphone preservation, synchronization, and filename collisions.
+The test script supplies framework paths when running with Command Line Tools.
